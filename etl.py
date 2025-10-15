@@ -147,14 +147,29 @@ def etl_imdb(cursor, dataset):
 				chunk['isAdult'] = chunk['isAdult'] == '1'
 
 				for row in chunk.itertuples(index=False):
+					try:
+						release_year = int(row[5])
+					except:
+						release_year = 0
+					
+					try:
+						end_year = int(row[6])
+					except:
+						end_year = None
+
+					try:
+						runtime_minutes = int(row[7])
+					except:
+						runtime_minutes = 0
+
 					insert_vals = (
 						row[0],
 						row[2] if type(row[2]) == str else '\\N',
 						row[3] if type(row[3]) == str else '\\N',
 						row[1],
-						int(row[5]) if row[5] != '\\N' else 0, 
-						int(row[6]) if row[6] != '\\N' else None,
-						int(row[7]) if row[7] != '\\N' else 0,
+						release_year, 
+						end_year,
+						runtime_minutes,
 						row[4]
 					)
 					cursor.execute(insert_title, insert_vals)
