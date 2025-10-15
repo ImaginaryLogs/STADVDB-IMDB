@@ -1,10 +1,11 @@
 import pandas as pd
+import re
 import mysql.connector
 import os
 from dotenv import load_dotenv
 import time
 
-CHUNK_SIZE = 10
+CHUNK_SIZE = 200000
 IMDB_DATA = {
     "name_basics": "data/name.basics.tsv",
     "title_basics": "data/title.basics.tsv",
@@ -96,6 +97,31 @@ PROFESSION_DATA = {
 AWARD_DATA = {}
 
 
+def get_genre(cursor, title_key):
+	select_genre = "SELECT genre_key FROM BridgeTitleGenre WHERE title_key = %s"
+	select_val = (title_key, )
+	cursor.execute(select_genre, select_val)
+	return cursor.fetchall()
+
+def get_episode_series(cursor, episode_key):
+	select_genre = "SELECT title_key FROM DimEpisode WHERE episode_key = %s"
+	select_val = (episode_key, )
+	cursor.execute(select_genre, select_val)
+	return cursor.fetchone()
+
+def get_crew(cursor, title_key):
+	select_crew = "SELECT person_key FROM BridgeCrew WHERE title_key = %s"
+	select_val = (title_key, )
+	cursor.execute(select_crew, select_val)
+	return cursor.fetchall()
+
+def get_release_year(cursor, title_key):
+	select_year = "SELECT release_year FROM DimTitle WHERE title_key = %s"
+	select_val = (title_key, )
+	cursor.execute(select_year, select_val)
+	return cursor.fetchone()
+
+
 def etl_misc(cursor):
 	insert_genre = "INSERT INTO DimGenre (genre_key, genre_name) VALUES (%s, %s)"
 	for i, val in GENRE_DATA.items():
@@ -108,20 +134,6 @@ def etl_misc(cursor):
 		insert_vals = (val, i)
 		cursor.execute(insert_profession, insert_vals)
 	print("professions Completed")
-
-	awards = []
-	for chunk in pd.read_csv('data/full_data.csv', sep='\t', chunksize=CHUNK_SIZE, usecols=['Class', 'CanonicalCategory', 'Category']):
-		for row in chunk.itertuples(index=False):
-			award = (row[0], row[1], row[2])
-			if award not in awards:
-				awards.append(award)
-	
-	i = 1
-	insert_award = "INSERT INTO DimAwardCategory (class, canonical_category, category) VALUES (%s, %s, %s)"
-	for award in awards:
-		AWARD_DATA.update({award: i})
-		cursor.execute(insert_award, award)
-	print("awards Completed")
 
 
 def etl_imdb(cursor, dataset):
@@ -163,7 +175,6 @@ def etl_imdb(cursor, dataset):
 
 				print(f'title.basics Chunk #{chunk_no} Done')
 				chunk_no += 1
-				break
 
 		case "name_basics":
 			insert_person = "INSERT INTO DimPerson (person_key, full_name, birth_year, death_year) VALUES (%s, %s, %s, %s)"
@@ -230,7 +241,7 @@ def etl_imdb(cursor, dataset):
 						except:
 							pass
 				
-				print(f'title.principals Chunk #{chunk_no} Done')
+				print(f'title.crew Chunk #{chunk_no} Done')
 				chunk_no += 1
 
 		case "title_episode":
@@ -242,21 +253,77 @@ def etl_imdb(cursor, dataset):
 					insert_vals = (row[0], row[1], row[2], row[3])
 					cursor.execute(insert_crew, insert_vals)
 				
-				print(f'title.principals Chunk #{chunk_no} Done')
+				print(f'title.episode Chunk #{chunk_no} Done')
 				chunk_no += 1
 
 		case "oscar_data":
-			insert_oscar = "INSERT INTO FactOscarAwards (title_key, person_key, award_category_key, ceremony_year)"
-			for chunk in pd.read_csv('data/full_data.csv', sep='\t', chunksize=CHUNK_SIZE, usecols=['Ceremony', 'Year', 'Class', 'CanonicalCategory', 'Category', ]):
+			awards = []
+			for chunk in pd.read_csv(IMDB_DATA[dataset], sep='\t', chunksize=CHUNK_SIZE, usecols=['Class', 'CanonicalCategory', 'Category']):
 				for row in chunk.itertuples(index=False):
 					award = (row[0], row[1], row[2])
 					if award not in awards:
 						awards.append(award)
+			
+			i = 1
+			insert_award = "INSERT INTO DimAwardCategory (class, canonical_category, category) VALUES (%s, %s, %s)"
+			for award in awards:
+				AWARD_DATA.update({award: i})
+				cursor.execute(insert_award, award)
+			print("awards Completed")
 
+			insert_oscar = "INSERT INTO FactOscarAwards (title_key, person_key, is_winner, award_category_key, ceremony_year) VALUES (%s, %s, %s, %s, %s)"
+			for chunk in pd.read_csv(IMDB_DATA[dataset], sep='\t', chunksize=CHUNK_SIZE, usecols=['Year', 'Class', 'CanonicalCategory', 'Category', 'FilmId', 'NomineeIds', 'Winner']):
+				chunk['Winner'] = chunk['Winner'].notna()
+				for row in chunk.itertuples(index=False):
+					year = int(re.sub(r'/.*', r'', row[0]))
+					award = (row[1], row[2], row[3])
+					if type(row[5]) == str:
+						nominees = row[5].split(',')
+						for nominee in nominees:
+							if nominee != '?':
+								insert_vals = (row[4], nominee, row[6], AWARD_DATA[award], year)
+								cursor.execute(insert_oscar, insert_vals)
+					else:
+						insert_vals = (row[4], None, row[6], AWARD_DATA[award], year)
+						cursor.execute(insert_oscar, insert_vals)
+				
+				print(f'oscar_data Chunk #{chunk_no} Done')
+				chunk_no += 1
+
+		case "title_ratings":
+			insert_ratings = "INSERT INTO FactRatings (title_key, genre_key, episode_key, avg_rating, num_votes) VALUES (%s, %s, %s, %s, %s)"
+			insert_performance = "INSERT INTO FactCrewPerformancePerFilmGenre (title_key, person_key, genre_key, avg_rating, num_votes, release_year) VALUES (%s, %s, %s, %s, %s, %s)"
+
+			for chunk in pd.read_csv(IMDB_DATA[dataset], sep='\t', chunksize=CHUNK_SIZE):
+				for row in chunk.itertuples(index=False):
+					genres = get_genre(cursor, row[0])
+					episode_series = get_episode_series(cursor, row[0])
+					crew = get_crew(cursor, row[0])
+					release_year = get_release_year(cursor, row[0])
+
+					for genre in genres:
+						insert_ratings_vals = (row[0], genre[0], episode_series[0] if episode_series != None else None, row[1], row[2])
+						cursor.execute(insert_ratings, insert_ratings_vals)
+
+						for person in crew:
+							insert_performance_vals = (row[0], person[0], genre[0], row[1], row[2], release_year[0])
+							cursor.execute(insert_performance, insert_performance_vals)
+				
+				print(f'title.ratings Chunk #{chunk_no} Done')
+				chunk_no += 1
+					
 
 def time_elapsed(s_time):
 	e_time = time.time() - s_time
 	print(f"Time Elapsed: {e_time // 3600:02d}:{e_time % 3600 // 60:02d}:{e_time % 3600 % 60:02d}")
+
+
+def etl_controller(cursor, val):
+	match val:
+		case "genre_profession":
+			etl_misc(cursor)
+		case _:
+			etl_imdb(cursor, val)
 
 
 if __name__ == '__main__':
@@ -278,52 +345,31 @@ if __name__ == '__main__':
 	)
 
 	cursorObject = imdb.cursor()
+	datasets = ["genre_profession", "title_basics", "name_basics", "title_principals", "title_crew", "title_episode", "oscar_data", "title_ratings"]
+
+	print("Select dataset to parse:")
+	print("(Parsing should be done in order)")
+	print("1 - Miscellaneous Data (DimGenres, DimProfessions)")
+	print("2 - title.basics.tsv (DimTitle, BridgeTitleGenre)")
+	print("3 - name.basics.tsv (DimPerson, BridgePersonProfession, BridgePersonTopTitles)")
+	print("4 - title.principals.tsv (BridgeCrew pt.1)")
+	print("5 - title.crew.tsv (BridgeCrew pt.2)")
+	print("6 - title.episode.tsv (DimEpisode)")
+	print("7 - full_data.csv (DimAwardCategory, FactOscarAwards)")
+	print("8 - title.ratings.tsv (FactRatings, FactCrewPerformancePerFilmGenre)")
+	print("9 - Run all datasets")
+	val = input("> ")
 
 	s_time = time.time()
 
-	# DimGenres, DimProfessions, DimAwardCategory
-	etl_misc(cursorObject)
-	imdb.commit()
-	time_elapsed(s_time)
-	
-	# DimTitle, BridgeTitleGenre
-	etl_imdb(cursorObject, "title_basics")
-	print('title.basics Completed')
-	imdb.commit()
-	time_elapsed(s_time)
-
-	# DimPerson, BridgePersonProfession, BridgePersonTopTitles
-	etl_imdb(cursorObject, "name_basics")
-	print('name.basics Completed')
-	imdb.commit()
-	time_elapsed(s_time)
-
-	# BridgeCrew
-	etl_imdb(cursorObject, "title_principals")
-	print('title.principals Completed')
-	imdb.commit()
-	time_elapsed(s_time)
-
-	# BridgeCrew cont.
-	etl_imdb(cursorObject, "title_crew")
-	print('title.principals Completed')
-	imdb.commit()
-	time_elapsed(s_time)
-
-	# DimEpisode
-	etl_imdb(cursorObject, "title_episode")
-	print('title.principals Completed')
-	imdb.commit()
-	time_elapsed(s_time)
-
-	etl_imdb(cursorObject, "oscar_data")
-	print('title.principals Completed')
-	imdb.commit()
-	time_elapsed(s_time)
-
-	# etl_imdb(cursorObject, "title_ratings")
-	# print('title.principals Completed')
-	# imdb.commit()
-	# time_elapsed(s_time)
+	if val >= 1 and val <= 8:
+		etl_controller(cursorObject, datasets[val - 1])
+		imdb.commit()
+		time_elapsed(s_time)
+	elif val == 9:
+		for data in datasets:
+			etl_controller(cursorObject, data)
+			imdb.commit()
+			time_elapsed(s_time)
 
 	imdb.close()
