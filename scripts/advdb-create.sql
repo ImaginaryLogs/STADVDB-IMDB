@@ -42,7 +42,7 @@ CREATE TABLE DimTitle (
  original_title VARCHAR(255),
  title_type VARCHAR(25) NOT NULL,
  release_year INT NOT NULL,
- end_year INT NOT NULL,  
+ end_year INT,  
  runtime_minutes INT NOT NULL, 
  release_decade INT GENERATED ALWAYS AS (FLOOR(release_year / 10) * 10) STORED,
  isAdult BOOL NOT NULL
