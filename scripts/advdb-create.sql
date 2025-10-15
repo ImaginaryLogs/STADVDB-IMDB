@@ -45,7 +45,7 @@ CREATE TABLE DimTitle (
  end_year INT NOT NULL,  
  runtime_minutes INT NOT NULL, 
  release_decade INT GENERATED ALWAYS AS (FLOOR(release_year / 10) * 10) STORED,
- isAdult BOOL NOT NULL,
+ isAdult BOOL NOT NULL
 );  
 
 CREATE TABLE FactOscarAwards (
@@ -129,3 +129,4 @@ CREATE INDEX idx_ftcgp_genre_year ON FactCrewPerformancePerFilmGenre (genre_key,
 
 
 -- DimTime is not recommended for my implementation. Year is enough.
+
