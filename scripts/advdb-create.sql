@@ -50,8 +50,8 @@ CREATE TABLE DimTitle (
 
 CREATE TABLE FactOscarAwards (
 	fact_id BIGINT AUTO_INCREMENT NOT NULL PRIMARY KEY,
-	title_key VARCHAR(10) NOT NULL,
-	person_key VARCHAR(10) NOT NULL,
+	title_key VARCHAR(10),
+	person_key VARCHAR(10),
 	is_winner BOOL NOT NULL,
 	award_category_key BIGINT NOT NULL,
 	ceremony_year INT,
@@ -129,4 +129,5 @@ CREATE INDEX idx_ftcgp_genre_year ON FactCrewPerformancePerFilmGenre (genre_key,
 
 
 -- DimTime is not recommended for my implementation. Year is enough.
+
 
