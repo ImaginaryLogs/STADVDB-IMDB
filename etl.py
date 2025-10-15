@@ -315,7 +315,7 @@ def etl_imdb(cursor, dataset):
 
 def time_elapsed(s_time):
 	e_time = time.time() - s_time
-	print(f"Time Elapsed: {e_time // 3600:02d}:{e_time % 3600 // 60:02d}:{e_time % 3600 % 60:02d}")
+	print(f"Time Elapsed: {e_time} seconds")
 
 
 def etl_controller(cursor, val):
@@ -358,18 +358,18 @@ if __name__ == '__main__':
 	print("7 - full_data.csv (DimAwardCategory, FactOscarAwards)")
 	print("8 - title.ratings.tsv (FactRatings, FactCrewPerformancePerFilmGenre)")
 	print("9 - Run all datasets")
-	val = input("> ")
+	val = int(input("> "))
 
 	s_time = time.time()
 
 	if val >= 1 and val <= 8:
 		etl_controller(cursorObject, datasets[val - 1])
-		imdb.commit()
 		time_elapsed(s_time)
+		imdb.commit()
 	elif val == 9:
 		for data in datasets:
 			etl_controller(cursorObject, data)
-			imdb.commit()
 			time_elapsed(s_time)
+			imdb.commit()
 
 	imdb.close()
