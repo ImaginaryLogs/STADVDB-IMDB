@@ -350,9 +350,6 @@ def etl_imdb(cursor, dataset):
 						for person in crew:
 							insert_performance_vals.append((row[0], person[0], genre[0], row[1], row[2], release_year[0]))
 							
-				
-				print(insert_ratings_vals)
-
 				cursor.executemany(insert_ratings, insert_ratings_vals)
 				cursor.executemany(insert_performance, insert_performance_vals)
 
