@@ -1,19 +1,19 @@
 
 CREATE TABLE DimGenre (
- genre_key TINYINT NOT NULL PRIMARY KEY,
- genre_name VARCHAR(11) NOT NULL
+genre_key TINYINT NOT NULL PRIMARY KEY,
+genre_name VARCHAR(11) NOT NULL
 );  
   
 CREATE TABLE DimPerson (
- person_key VARCHAR(10) NOT NULL PRIMARY KEY,
- full_name VARCHAR(128) NOT NULL,
- birth_year INT NOT NULL,
- death_year INT
+person_key VARCHAR(10) NOT NULL PRIMARY KEY,
+full_name VARCHAR(128) NOT NULL,
+birth_year INT NOT NULL,
+death_year INT
 );
   
 CREATE TABLE DimProfession (
- profession_key TINYINT NOT NULL PRIMARY KEY,
- profession_name VARCHAR(64)
+profession_key TINYINT NOT NULL PRIMARY KEY,
+profession_name VARCHAR(64)
 );  
   
 CREATE TABLE BridgePersonProfession (  
@@ -37,15 +37,15 @@ CREATE TABLE DimAwardCategory (
 
 
 CREATE TABLE DimTitle (
- title_key VARCHAR(10) NOT NULL PRIMARY KEY,
- primary_title VARCHAR(255) NOT NULL,
- original_title VARCHAR(255),
- title_type VARCHAR(25) NOT NULL,
- release_year INT NOT NULL,
- end_year INT,  
- runtime_minutes INT NOT NULL, 
- release_decade INT GENERATED ALWAYS AS (FLOOR(release_year / 10) * 10) STORED,
- isAdult BOOL NOT NULL
+title_key VARCHAR(10) NOT NULL PRIMARY KEY,
+primary_title VARCHAR(255) NOT NULL,
+original_title VARCHAR(255),
+title_type VARCHAR(25) NOT NULL,
+release_year INT NOT NULL,
+end_year INT,  
+runtime_minutes INT NOT NULL, 
+release_decade INT GENERATED ALWAYS AS (FLOOR(release_year / 10) * 10) STORED,
+isAdult BOOL NOT NULL
 );  
 
 CREATE TABLE FactOscarAwards (
@@ -75,28 +75,28 @@ CREATE TABLE FactCrewPerformancePerFilmGenre (
 );
 
   CREATE TABLE BridgeTitleGenre (
- title_key VARCHAR(10) NOT NULL,
- genre_key TINYINT NOT NULL,
- PRIMARY KEY (title_key, genre_key),
- FOREIGN KEY (title_key) REFERENCES DimTitle(title_key),
- FOREIGN KEY (genre_key) REFERENCES DimGenre(genre_key)
+title_key VARCHAR(10) NOT NULL,
+genre_key TINYINT NOT NULL,
+PRIMARY KEY (title_key, genre_key),
+FOREIGN KEY (title_key) REFERENCES DimTitle(title_key),
+FOREIGN KEY (genre_key) REFERENCES DimGenre(genre_key)
 );  
   
 CREATE TABLE BridgePersonTopTitles (
- person_key VARCHAR(10) NOT NULL,
- title_key VARCHAR(10) NOT NULL,
+person_key VARCHAR(10) NOT NULL,
+title_key VARCHAR(10) NOT NULL,
 PRIMARY KEY (person_key, title_key),
- FOREIGN KEY (person_key) REFERENCES DimPerson(person_key),
- FOREIGN KEY (title_key) REFERENCES DimTitle(title_key)
+FOREIGN KEY (person_key) REFERENCES DimPerson(person_key),
+FOREIGN KEY (title_key) REFERENCES DimTitle(title_key)
 );  
 
 CREATE TABLE DimEpisode (
- episode_key VARCHAR(10) PRIMARY KEY,
- title_key VARCHAR(10) NOT NULL,
- season_number INT,
- episode_number INT,  
- FOREIGN KEY (title_key) REFERENCES DimTitle(title_key),
- UNIQUE(title_key, season_number, episode_number)
+episode_key VARCHAR(10) PRIMARY KEY,
+title_key VARCHAR(10) NOT NULL,
+season_number INT,
+episode_number INT,  
+FOREIGN KEY (title_key) REFERENCES DimTitle(title_key),
+UNIQUE(title_key, season_number, episode_number)
 );
 
 CREATE TABLE FactRatings (
@@ -113,11 +113,11 @@ CREATE TABLE FactRatings (
 
 CREATE TABLE BridgeCrew (
  title_key VARCHAR(10) NOT NULL,
- person_key VARCHAR(10) NOT NULL,
- category VARCHAR(64) NOT NULL,
- job VARCHAR(64),
+person_key VARCHAR(10) NOT NULL,
+category VARCHAR(64) NOT NULL,
+job VARCHAR(64),
 PRIMARY KEY  (title_key,person_key),
- FOREIGN KEY (person_key) REFERENCES DimPerson(person_key)
+FOREIGN KEY (person_key) REFERENCES DimPerson(person_key)
 );
 
 CREATE INDEX idx_factratings_title ON FactRatings(title_key);
