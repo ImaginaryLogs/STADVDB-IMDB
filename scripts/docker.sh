@@ -1,0 +1,1 @@
+sudo docker run --name stadvdb-mysql -e MYSQL_ROOT_PASSWORD=rinaldoisfat --network stadvdb -p 3306:3306 -d mysql:latest

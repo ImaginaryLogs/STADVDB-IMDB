@@ -14,3 +14,5 @@ echo "NUMBER 7 COMMAND\n"
 echo "7" | ./bin/python3 etl.py
 echo "NUMBER 8 COMMAND\n"
 echo "8" | ./bin/python3 etl.py
+
+
