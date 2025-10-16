@@ -148,7 +148,7 @@ def etl_imdb(cursor, dataset):
 				insert_title_vals = []
 				insert_title_genre_vals = []
 
-				chunk['isAdult'] = chunk['isAdult'] == '1'
+				chunk['isAdult'] = chunk['isAdult'] == 1
 
 				for row in chunk.itertuples(index=False):
 					try:
@@ -245,7 +245,7 @@ def etl_imdb(cursor, dataset):
 				chunk_no += 1
 
 		case "title_crew":
-			insert_crew = "INSERT INTO BridgeCrew (title_key, person_key, category) VALUES (%s, %s, %s)"
+			insert_crew = "INSERT IGNORE INTO BridgeCrew (title_key, person_key, category) VALUES (%s, %s, %s)"
 
 			for chunk in pd.read_csv(IMDB_DATA[dataset], sep='\t', chunksize=CHUNK_SIZE):
 				insert_vals = []
@@ -253,17 +253,13 @@ def etl_imdb(cursor, dataset):
 				for row in chunk.itertuples(index=False):
 					directors = row[1].split(',')
 					for director in directors:
-						try:
+						if director != '\\N':
 							insert_vals.append((row[0], director, 'director'))
-						except:
-							pass
 					
 					writers = row[2].split(',')
 					for writer in writers:
-						try:
+						if writer != '\\N':
 							insert_vals.append((row[0], writer, 'writer'))
-						except:
-							pass
 				
 				cursor.executemany(insert_crew, insert_vals)
 
@@ -271,13 +267,23 @@ def etl_imdb(cursor, dataset):
 				chunk_no += 1
 
 		case "title_episode":
-			insert_crew = "INSERT INTO DimEpisode (episode_key, title_key, season_number, episode_number)"
+			insert_crew = "INSERT INTO DimEpisode (episode_key, title_key, season_number, episode_number) VALUES (%s, %s, %s, %s)"
 
 			for chunk in pd.read_csv(IMDB_DATA[dataset], sep='\t', chunksize=CHUNK_SIZE):
 				insert_vals = []
 
 				for row in chunk.itertuples(index=False):
-					insert_vals.append((row[0], row[1], row[2], row[3]))
+					try:
+						season_no = int(row[2])
+					except:
+						season_no = 0
+
+					try:
+						episode_no = int(row[3])
+					except:
+						episode_no = 0
+
+					insert_vals.append((row[0], row[1], season_no, episode_no))
 				
 				cursor.executemany(insert_crew, insert_vals)
 				
@@ -293,9 +299,11 @@ def etl_imdb(cursor, dataset):
 						awards.append(award)
 			
 			i = 1
-			insert_award = "INSERT INTO DimAwardCategory (class, canonical_category, category) VALUES (%s, %s, %s)"
+			insert_award = "INSERT INTO DimAwardCategory (class, canonical_category, category, award_category_key) VALUES (%s, %s, %s, %s)"
 			for award in awards:
 				AWARD_DATA.update({award: i})
+				award += (i,)
+				i += 1
 				cursor.execute(insert_award, award)
 			print("awards Completed")
 
@@ -311,9 +319,9 @@ def etl_imdb(cursor, dataset):
 						nominees = row[5].split(',')
 						for nominee in nominees:
 							if nominee != '?':
-								insert_vals.append((row[4], nominee, row[6], AWARD_DATA[award], year))
+								insert_vals.append((row[4] if type(row[4]) == str else None, nominee, row[6], AWARD_DATA[award], year))
 					else:
-						insert_vals.append((row[4], None, row[6], AWARD_DATA[award], year))
+						insert_vals.append((row[4] if type(row[4]) == str else None, None, row[6], AWARD_DATA[award], year))
 
 				cursor.executemany(insert_oscar, insert_vals)		
 				
@@ -335,7 +343,10 @@ def etl_imdb(cursor, dataset):
 					release_year = get_release_year(cursor, row[0])
 
 					for genre in genres:
-						insert_ratings_vals.append((row[0], genre[0], episode_series[0] if episode_series != None else None, row[1], row[2]))
+						if episode_series != None:
+							insert_ratings_vals.append((episode_series[0], genre[0], row[0], row[1], row[2]))
+						else:
+							insert_ratings_vals.append((row[0], genre[0], None, row[1], row[2]))
 
 						for person in crew:
 							insert_performance_vals.append((row[0], person[0], genre[0], row[1], row[2], release_year[0]))
