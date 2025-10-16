@@ -252,17 +252,19 @@ def etl_imdb(cursor, dataset):
 				for row in chunk.itertuples(index=False):
 					directors = row[1].split(',')
 					for director in directors:
-						try:
-							insert_vals.append((row[0], director, 'director'))
-						except:
-							pass
+						if director != '\\N':
+							try:
+								insert_vals.append((row[0], director, 'director'))
+							except:
+								pass
 					
 					writers = row[2].split(',')
 					for writer in writers:
-						try:
-							insert_vals.append((row[0], writer, 'writer'))
-						except:
-							pass
+						if writer != '\\N':
+							try:
+								insert_vals.append((row[0], writer, 'writer'))
+							except:
+								pass
 				
 				cursor.executemany(insert_crew, insert_vals)
 
