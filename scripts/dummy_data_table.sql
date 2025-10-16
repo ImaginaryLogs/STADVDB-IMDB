@@ -5,8 +5,8 @@ CREATE TABLE title_akas (
     title TEXT,
     region TEXT,
     language TEXT,
-    types TEXT[],           -- Array of enumerated attributes
-    attributes TEXT[],      -- Array of additional terms
+    types TEXT,           -- Array of enumerated attributes
+    attributes TEXT,      -- Array of additional terms
     isOriginalTitle BOOLEAN,
     PRIMARY KEY (titleId, ordering)
 );
@@ -21,14 +21,14 @@ CREATE TABLE title_basics (
     startYear TEXT,       -- YYYY format
     endYear TEXT,         -- YYYY format or '\N'
     runtimeMinutes INT,
-    genres TEXT[]            -- Array of up to three genres
+    genres TEXT            -- Array of up to three genres
 );
 
 -- Table: title_crew
 CREATE TABLE title_crew (
     tconst TEXT PRIMARY KEY,
-    directors TEXT[],        -- Array of nconsts
-    writers TEXT[]           -- Array of nconsts
+    directors TEXT,        -- Array of nconsts
+    writers TEXT           -- Array of nconsts
 );
 
 -- Table: title_episode
@@ -63,6 +63,6 @@ CREATE TABLE name_basics (
     primaryName TEXT,
     birthYear TEXT,              -- YYYY format
     deathYear TEXT,              -- YYYY format or '\N'
-    primaryProfession TEXT[],       -- Array of strings
-    knownForTitles TEXT[]           -- Array of tconsts
+    primaryProfession TEXT,       -- Array of strings
+    knownForTitles TEXT          -- Array of tconsts
 );

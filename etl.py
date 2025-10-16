@@ -4,6 +4,7 @@ import mysql.connector
 import os
 from dotenv import load_dotenv
 import time
+val = int(input("> "))
 
 CHUNK_SIZE = 200000
 IMDB_DATA = {
@@ -373,7 +374,6 @@ if __name__ == '__main__':
 	print("7 - full_data.csv (DimAwardCategory, FactOscarAwards)")
 	print("8 - title.ratings.tsv (FactRatings, FactCrewPerformancePerFilmGenre)")
 	print("9 - Run all datasets")
-	val = int(input("> "))
 
 	s_time = time.time()
 

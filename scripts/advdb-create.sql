@@ -1,11 +1,15 @@
+DROP SCHEMA IF EXISTS imdb;
+CREATE SCHEMA imdb;
 
+
+use imdb;
 CREATE TABLE DimGenre (
  genre_key TINYINT NOT NULL PRIMARY KEY,
  genre_name VARCHAR(11) NOT NULL
 );  
   
 CREATE TABLE DimPerson (
- person_key VARCHAR(10) NOT NULL PRIMARY KEY,
+ person_key VARCHAR(16) NOT NULL PRIMARY KEY,
  full_name VARCHAR(128) NOT NULL,
  birth_year INT NOT NULL,
  death_year INT
@@ -17,7 +21,7 @@ CREATE TABLE DimProfession (
 );  
   
 CREATE TABLE BridgePersonProfession (  
-	person_key VARCHAR(10) NOT NULL,  
+	person_key VARCHAR(16) NOT NULL,  
 	profession_key TINYINT NOT NULL,  
 	PRIMARY KEY (person_key, profession_key),  
 	FOREIGN KEY (person_key) REFERENCES DimPerson(person_key),  
@@ -37,21 +41,21 @@ CREATE TABLE DimAwardCategory (
 
 
 CREATE TABLE DimTitle (
- title_key VARCHAR(10) NOT NULL PRIMARY KEY,
- primary_title VARCHAR(255) NOT NULL,
- original_title VARCHAR(255),
+ title_key VARCHAR(16) NOT NULL PRIMARY KEY,
+ primary_title VARCHAR(512) NOT NULL,
+ original_title VARCHAR(512),
  title_type VARCHAR(25) NOT NULL,
  release_year INT NOT NULL,
  end_year INT,  
  runtime_minutes INT NOT NULL, 
- release_decade INT GENERATED ALWAYS AS (FLOOR(release_year / 10) * 10) STORED,
+ release_decade INT GENERATED ALWAYS AS (FLOOR(release_year / 16) * 16) STORED,
  isAdult BOOL NOT NULL
 );  
 
 CREATE TABLE FactOscarAwards (
 	fact_id BIGINT AUTO_INCREMENT NOT NULL PRIMARY KEY,
-	title_key VARCHAR(10),
-	person_key VARCHAR(10),
+	title_key VARCHAR(16),
+	person_key VARCHAR(16),
 	is_winner BOOL NOT NULL,
 	award_category_key BIGINT NOT NULL,
 	ceremony_year INT,
@@ -62,8 +66,8 @@ CREATE TABLE FactOscarAwards (
 
 CREATE TABLE FactCrewPerformancePerFilmGenre (
     fact_key BIGINT AUTO_INCREMENT PRIMARY KEY,
-    title_key VARCHAR(10) NOT NULL,
-    person_key VARCHAR(10) NOT NULL,
+    title_key VARCHAR(16) NOT NULL,
+    person_key VARCHAR(16) NOT NULL,
     genre_key TINYINT NOT NULL,
     avg_rating FLOAT,
     num_votes INT,
@@ -75,7 +79,7 @@ CREATE TABLE FactCrewPerformancePerFilmGenre (
 );
 
   CREATE TABLE BridgeTitleGenre (
- title_key VARCHAR(10) NOT NULL,
+ title_key VARCHAR(16) NOT NULL,
  genre_key TINYINT NOT NULL,
  PRIMARY KEY (title_key, genre_key),
  FOREIGN KEY (title_key) REFERENCES DimTitle(title_key),
@@ -83,16 +87,16 @@ CREATE TABLE FactCrewPerformancePerFilmGenre (
 );  
   
 CREATE TABLE BridgePersonTopTitles (
- person_key VARCHAR(10) NOT NULL,
- title_key VARCHAR(10) NOT NULL,
+ person_key VARCHAR(16) NOT NULL,
+ title_key VARCHAR(16) NOT NULL,
 PRIMARY KEY (person_key, title_key),
  FOREIGN KEY (person_key) REFERENCES DimPerson(person_key),
  FOREIGN KEY (title_key) REFERENCES DimTitle(title_key)
 );  
 
 CREATE TABLE DimEpisode (
- episode_key VARCHAR(10) PRIMARY KEY,
- title_key VARCHAR(10) NOT NULL,
+ episode_key VARCHAR(16) PRIMARY KEY,
+ title_key VARCHAR(16) NOT NULL,
  season_number INT,
  episode_number INT,  
  FOREIGN KEY (title_key) REFERENCES DimTitle(title_key),
@@ -101,9 +105,9 @@ CREATE TABLE DimEpisode (
 
 CREATE TABLE FactRatings (
 	fact_id BIGINT AUTO_INCREMENT NOT NULL PRIMARY KEY,
-	title_key VARCHAR(10) NOT NULL,
+	title_key VARCHAR(16) NOT NULL,
 	genre_key TINYINT NOT NULL,
-	episode_key VARCHAR(10),
+	episode_key VARCHAR(16),
 	avg_rating FLOAT,
 	num_votes INT,
 	FOREIGN KEY (title_key) REFERENCES DimTitle(title_key),
@@ -112,8 +116,8 @@ CREATE TABLE FactRatings (
 );
 
 CREATE TABLE BridgeCrew (
- title_key VARCHAR(10) NOT NULL,
- person_key VARCHAR(10) NOT NULL,
+ title_key VARCHAR(16) NOT NULL,
+ person_key VARCHAR(16) NOT NULL,
  category VARCHAR(64) NOT NULL,
  job VARCHAR(64),
 PRIMARY KEY  (title_key,person_key),
