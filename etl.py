@@ -210,13 +210,13 @@ def etl_imdb(cursor, dataset):
 					professions = row[4].split(',')
 					for profession in professions:
 						if profession != '\\N':
-							insert_vals = (row[1], PROFESSION_DATA[profession])
+							insert_vals = (row[0], PROFESSION_DATA[profession])
 							cursor.execute(insert_profession, insert_vals)
 
 					titles = row[5].split(',')
 					for title in titles:
 						if title != '\\N':
-							insert_vals = (row[1], title)
+							insert_vals = (row[0], title)
 							cursor.execute(insert_top_titles, insert_vals)
 
 				print(f'name.basics Chunk #{chunk_no} Done')
