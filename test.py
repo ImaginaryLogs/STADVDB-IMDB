@@ -4,17 +4,16 @@ import mysql.connector
 import os
 from dotenv import load_dotenv
 import time
-val = int(input("> "))
 
-CHUNK_SIZE = 200000
+CHUNK_SIZE = 10
 IMDB_DATA = {
-    "name_basics": "data/name.basics.tsv",
-    "title_basics": "data/title.basics.tsv",
-    "title_crew": "data/title.crew.tsv",
-    "title_episode": "data/title.episode.tsv",
-    "title_principals": "data/title.principals.tsv",
-    "title_ratings": "data/title.ratings.tsv",
-    "oscar_data": "data/full_data.csv",
+    "name_basics": "sample_data/name.basics.csv",
+    "title_basics": "sample_data/title.basics.csv",
+    "title_crew": "sample_data/title.crew.csv",
+    "title_episode": "sample_data/title.episode.csv",
+    "title_principals": "sample_data/title.principals.csv",
+    "title_ratings": "sample_data/title.ratings.csv",
+    "oscar_data": "sample_data/full_data.csv",
 }
 GENRE_DATA = {
     'Documentary': 1,
@@ -253,17 +252,19 @@ def etl_imdb(cursor, dataset):
 				for row in chunk.itertuples(index=False):
 					directors = row[1].split(',')
 					for director in directors:
-						try:
-							insert_vals.append((row[0], director, 'director'))
-						except:
-							pass
+						if director != '\\N':
+							try:
+								insert_vals.append((row[0], director, 'director'))
+							except:
+								pass
 					
 					writers = row[2].split(',')
 					for writer in writers:
-						try:
-							insert_vals.append((row[0], writer, 'writer'))
-						except:
-							pass
+						if writer != '\\N':
+							try:
+								insert_vals.append((row[0], writer, 'writer'))
+							except:
+								pass
 				
 				cursor.executemany(insert_crew, insert_vals)
 
@@ -277,7 +278,17 @@ def etl_imdb(cursor, dataset):
 				insert_vals = []
 
 				for row in chunk.itertuples(index=False):
-					insert_vals.append((row[0], row[1], row[2], row[3]))
+					try:
+						season_no = int(row[2])
+					except:
+						season_no = 0
+
+					try:
+						episode_no = int(row[2])
+					except:
+						episode_no = 0
+
+					insert_vals.append((row[0], row[1], season_no, episode_no))
 				
 				cursor.executemany(insert_crew, insert_vals)
 				
@@ -392,6 +403,7 @@ if __name__ == '__main__':
 	print("7 - full_data.csv (DimAwardCategory, FactOscarAwards)")
 	print("8 - title.ratings.tsv (FactRatings, FactCrewPerformancePerFilmGenre)")
 	print("9 - Run all datasets")
+	val = int(input("> "))
 
 	s_time = time.time()
 

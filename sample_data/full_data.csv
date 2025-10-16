@@ -1,0 +1,14 @@
+Ceremony	Year	Class	CanonicalCategory	Category	NomId	Film	FilmId	Name	Nominees	NomineeIds	Winner	Detail	Note	Citation	MultifilmNomination
+1	1927/28	Acting	ACTOR IN A LEADING ROLE	ACTOR	an0051251	The Noose	tt0000002	Richard Barthelmess	Richard Barthelmess	nm0000001		Nickie Elkins			True
+1	1927/28	Acting	ACTOR IN A LEADING ROLE	ACTOR	an0051252	The Patent Leather Kid	tt0000002	Richard Barthelmess	Richard Barthelmess	nm0000002		The Patent Leather Kid			True
+1	1927/28	Acting	ACTOR IN A LEADING ROLE	ACTOR	an0051250a	The Last Command	tt0000001	Emil Jannings	Emil Jannings	nm0000003	True	General Dolgorucki [Grand Duke Sergius Alexander]			True
+1	1927/28	Acting	ACTOR IN A LEADING ROLE	ACTOR	an0051250b	The Way of All Flesh	tt0000007	Emil Jannings	Emil Jannings	nm0000004,nm0000007	True	August Schilling			True
+1	1927/28	Acting	ACTRESS IN A LEADING ROLE	ACTRESS	an0051255	A Ship Comes In	tt0000005	Louise Dresser	Louise Dresser	nm0000005		Mrs. Pleznik			
+1	1927/28	Acting	ACTRESS IN A LEADING ROLE	ACTRESS	an0051254a	7th Heaven	tt0000002	Janet Gaynor	Janet Gaynor	nm0000006,nm0000002	True	Diane			True
+1	1927/28	Acting	ACTRESS IN A LEADING ROLE	ACTRESS	an0051254b	Street Angel	tt0000007	Janet Gaynor	Janet Gaynor	nm0000007	True	Angela			True
+1	1927/28	Acting	ACTRESS IN A LEADING ROLE	ACTRESS	an0051254c	Sunrise	tt0000004	Janet Gaynor	Janet Gaynor	nm0000008	True	The Wife			True
+1	1927/28	Acting	ACTRESS IN A LEADING ROLE	ACTRESS	an0051256	Sadie Thompson	tt0000001	Gloria Swanson	Gloria Swanson	nm0000009		Sadie Thompson			
+1	1927/28	Production	ART DIRECTION	ART DIRECTION	an0051282	Sunrise	tt0000010								
+1	1927/28	Production	ART DIRECTION	ART DIRECTION	an0051279	The Dove	tt0000001	William Cameron Menzies	William Cameron Menzies	nm0000009	True				True
+1	1927/28	Production	ART DIRECTION	ART DIRECTION	an0051280	Tempest		William Cameron Menzies	William Cameron Menzies	nm0000008	True				True
+1	1927/28	Production	ART DIRECTION	ART DIRECTION	an0051281	7th Heaven									

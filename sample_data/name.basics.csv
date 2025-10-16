@@ -1,0 +1,11 @@
+nconst	primaryName	birthYear	deathYear	primaryProfession	knownForTitles
+nm0000001	Renzo Chua	1899	1987	actor,miscellaneous,producer	tt0000002,tt0000003,tt0000001,tt0000004
+nm0000002	Adelrico	1924	2014	actress,soundtrack,archive_footage	tt0000002,tt0000001
+nm0000003	Jarvis Ang	1934	\N	actress,music_department,producer	tt0000001
+nm0000004	Clivetto Jarelini	1949	1982	actor,writer,music_department	tt0000009,tt0000007,tt0000010
+nm0000005	Mao	1918	2007	writer,director,actor	tt0000005
+nm0000006	Roan Campo	1915	1982	actress,producer,soundtrack	tt0000001,tt0000002,tt0000004,tt0000008
+nm0000007	Clarence Jarvis Ang	1899	1957	actor,producer,miscellaneous	tt0000001,tt0000007
+nm0000008	Johnny Sins	1924	2004	actor,director,writer	tt0000004
+nm0000009	Walter White	1925	1984	actor,producer,director	tt0000001,tt0000002
+nm0000010	Steve	1899	1986	actor,director,producer	tt0000009
