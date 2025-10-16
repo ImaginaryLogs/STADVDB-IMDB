@@ -200,31 +200,27 @@ def etl_imdb(cursor, dataset):
 			insert_top_titles = "INSERT IGNORE INTO BridgePersonTopTitles (person_key, title_key) VALUES (%s, %s)"
 
 			for chunk in pd.read_csv(IMDB_DATA[dataset], sep='\t', chunksize=CHUNK_SIZE):
-				insert_person_vals = []
-				insert_profession_vals = []
-				insert_top_titles_vals = []
 
 				for row in chunk.itertuples(index=False):
-					insert_person_vals.append((
+					insert_person_vals = (
 						row[0], 
 						row[1] if type(row[1]) == str else 'Unknown', 
 						int(row[2]) if row[2] != '\\N' else 0, 
 						int(row[3]) if row[3] != '\\N' else None
-					))
+					)
+					cursor.execute(insert_person, insert_person_vals)
 
 					professions = row[4].split(',')
 					for profession in professions:
 						if profession != '\\N':
-							insert_profession_vals.append((row[0], PROFESSION_DATA[profession]))
+							insert_profession_vals = (row[0], PROFESSION_DATA[profession])
+							cursor.execute(insert_profession, insert_profession_vals)
 
 					titles = row[5].split(',')
 					for title in titles:
 						if title != '\\N':
-							insert_top_titles_vals.append((row[0], title))
-
-				cursor.executemany(insert_person, insert_person_vals)
-				cursor.executemany(insert_profession, insert_profession_vals)
-				cursor.executemany(insert_top_titles, insert_top_titles_vals)
+							insert_top_titles_vals = (row[0], title)
+							cursor.execute(insert_top_titles, insert_top_titles_vals)
 
 				print(f'name.basics Chunk #{chunk_no} Done')
 				chunk_no += 1
@@ -233,12 +229,10 @@ def etl_imdb(cursor, dataset):
 			insert_crew = "INSERT IGNORE INTO BridgeCrew (title_key, person_key, category, job) VALUES (%s, %s, %s, %s)"
 
 			for chunk in pd.read_csv(IMDB_DATA[dataset], sep='\t', chunksize=CHUNK_SIZE, usecols=['tconst', 'nconst', 'category', 'job']):
-				insert_vals = []
 
 				for row in chunk.itertuples(index=False):
-					insert_vals.append((row[0], row[1], row[2], row[3]))
-				
-				cursor.executemany(insert_crew, insert_vals)
+					insert_vals = (row[0], row[1], row[2], row[3])
+					cursor.execute(insert_crew, insert_vals)
 				
 				print(f'title.principals Chunk #{chunk_no} Done')
 				chunk_no += 1
@@ -247,20 +241,19 @@ def etl_imdb(cursor, dataset):
 			insert_crew = "INSERT IGNORE INTO BridgeCrew (title_key, person_key, category) VALUES (%s, %s, %s)"
 
 			for chunk in pd.read_csv(IMDB_DATA[dataset], sep='\t', chunksize=CHUNK_SIZE):
-				insert_vals = []
 
 				for row in chunk.itertuples(index=False):
 					directors = row[1].split(',')
 					for director in directors:
 						if director != '\\N':
-							insert_vals.append((row[0], director, 'director'))
+							insert_vals = (row[0], director, 'director')
+							cursor.execute(insert_crew, insert_vals)
 					
 					writers = row[2].split(',')
 					for writer in writers:
 						if writer != '\\N':
-							insert_vals.append((row[0], writer, 'writer'))
-				
-				cursor.executemany(insert_crew, insert_vals)
+							insert_vals = (row[0], writer, 'writer')
+							cursor.execute(insert_crew, insert_vals)
 
 				print(f'title.crew Chunk #{chunk_no} Done')
 				chunk_no += 1
@@ -269,7 +262,6 @@ def etl_imdb(cursor, dataset):
 			insert_crew = "INSERT IGNORE INTO DimEpisode (episode_key, title_key, season_number, episode_number) VALUES (%s, %s, %s, %s)"
 
 			for chunk in pd.read_csv(IMDB_DATA[dataset], sep='\t', chunksize=CHUNK_SIZE):
-				insert_vals = []
 
 				for row in chunk.itertuples(index=False):
 					try:
@@ -282,9 +274,8 @@ def etl_imdb(cursor, dataset):
 					except:
 						episode_no = 0
 
-					insert_vals.append((row[0], row[1], season_no, episode_no))
-				
-				cursor.executemany(insert_crew, insert_vals)
+					insert_vals = (row[0], row[1], season_no, episode_no)
+					cursor.execute(insert_crew, insert_vals)
 				
 				print(f'title.episode Chunk #{chunk_no} Done')
 				chunk_no += 1
@@ -308,7 +299,6 @@ def etl_imdb(cursor, dataset):
 
 			insert_oscar = "INSERT IGNORE INTO FactOscarAwards (title_key, person_key, is_winner, award_category_key, ceremony_year) VALUES (%s, %s, %s, %s, %s)"
 			for chunk in pd.read_csv(IMDB_DATA[dataset], sep='\t', chunksize=CHUNK_SIZE, usecols=['Year', 'Class', 'CanonicalCategory', 'Category', 'FilmId', 'NomineeIds', 'Winner']):
-				insert_vals = []
 				
 				chunk['Winner'] = chunk['Winner'].notna()
 				for row in chunk.itertuples(index=False):
@@ -318,11 +308,11 @@ def etl_imdb(cursor, dataset):
 						nominees = row[5].split(',')
 						for nominee in nominees:
 							if nominee != '?':
-								insert_vals.append((row[4] if type(row[4]) == str else None, nominee, row[6], AWARD_DATA[award], year))
+								insert_vals = (row[4] if type(row[4]) == str else None, nominee, row[6], AWARD_DATA[award], year)
+								cursor.execute(insert_oscar, insert_vals)
 					else:
-						insert_vals.append((row[4] if type(row[4]) == str else None, None, row[6], AWARD_DATA[award], year))
-
-				cursor.executemany(insert_oscar, insert_vals)		
+						insert_vals = (row[4] if type(row[4]) == str else None, None, row[6], AWARD_DATA[award], year)
+						cursor.execute(insert_oscar, insert_vals)		
 				
 				print(f'oscar_data Chunk #{chunk_no} Done')
 				chunk_no += 1
@@ -332,8 +322,6 @@ def etl_imdb(cursor, dataset):
 			insert_performance = "INSERT IGNORE INTO FactCrewPerformancePerFilmGenre (title_key, person_key, genre_key, avg_rating, num_votes, release_year) VALUES (%s, %s, %s, %s, %s, %s)"
 
 			for chunk in pd.read_csv(IMDB_DATA[dataset], sep='\t', chunksize=CHUNK_SIZE):
-				insert_ratings_vals = []
-				insert_performance_vals = []
 				
 				for row in chunk.itertuples(index=False):
 					genres = get_genre(cursor, row[0])
@@ -343,15 +331,15 @@ def etl_imdb(cursor, dataset):
 
 					for genre in genres:
 						if episode_series != None:
-							insert_ratings_vals.append((episode_series[0], genre[0], row[0], row[1], row[2]))
+							insert_ratings_vals = (episode_series[0], genre[0], row[0], row[1], row[2])
+							cursor.execute(insert_ratings, insert_ratings_vals)
 						else:
-							insert_ratings_vals.append((row[0], genre[0], None, row[1], row[2]))
+							insert_ratings_vals = (row[0], genre[0], None, row[1], row[2])
+							cursor.execute(insert_ratings, insert_ratings_vals)
 
 						for person in crew:
-							insert_performance_vals.append((row[0], person[0], genre[0], row[1], row[2], release_year[0]))
-							
-				cursor.executemany(insert_ratings, insert_ratings_vals)
-				cursor.executemany(insert_performance, insert_performance_vals)
+							insert_performance_vals = (row[0], person[0], genre[0], row[1], row[2], release_year[0])
+							cursor.execute(insert_performance, insert_performance_vals)
 
 				print(f'title.ratings Chunk #{chunk_no} Done')
 				chunk_no += 1
