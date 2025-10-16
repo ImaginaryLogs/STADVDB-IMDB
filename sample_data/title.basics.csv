@@ -1,0 +1,11 @@
+tconst	titleType	primaryTitle	originalTitle	isAdult	startYear	endYear	runtimeMinutes	genres
+tt0000001	short	Chiikawa	Chiikawa	1	2022	\N	1	Documentary,Short
+tt0000002	short	Rinaldo’s Restaurant	Rinaldo’s Restaurant	0	1892	\N	5	Animation,Short
+tt0000003	short	Bababoey	Bababoey	0	1892	\N	5	Animation,Comedy,Romance
+tt0000004	short	Iron Man 4	Iron Man 5	0	1892	2025	12	Animation,Short
+tt0000005	short	Hoplite	Hoplite	0	1893	\N	1	Short
+tt0000006	short	Neuron	Neuron	0	1894	\N	1	Short
+tt0000007	short	Golden	Golden	0	\N	\N	1	Short,Sport
+tt0000008	short	STADVDB	STADVDB	0	1894	\N	1	Documentary,Short
+tt0000009	movie	Minecraft Jarvis Edition	Minecraft Jarvis Edition	0	1894	\N	45	Romance
+tt0000010	short	Noita	Noita	0	1895	\N	1	Documentary,Short
