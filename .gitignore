@@ -7,3 +7,4 @@ lib64/
 .env
 pyvenv.cfg
 lib64
+app/node_modules/

@@ -44,6 +44,7 @@ title_type VARCHAR(25) NOT NULL,
 release_year INT NOT NULL,
 end_year INT,  
 genre VARCHAR(32) NOT NULL,
+top_titles VARCHAR(4096),
 runtime_minutes INT NOT NULL, 
 release_decade INT GENERATED ALWAYS AS (FLOOR(release_year / 16) * 16) STORED,
 isAdult BOOL NOT NULL
