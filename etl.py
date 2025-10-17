@@ -137,7 +137,7 @@ def etl_misc(cursor):
 	print("professions Completed")
 
 
-def etl_imdb(cursor, dataset):
+def etl_imdb(cursor, dataset, imdb):
 	chunk_no = 1
 	match dataset:
 		case "title_basics":
@@ -191,6 +191,7 @@ def etl_imdb(cursor, dataset):
 
 				cursor.executemany(insert_title, insert_title_vals)
 				cursor.executemany(insert_title_genre, insert_title_genre_vals)
+				imdb.commit()
 
 				print(f'title.basics Chunk #{chunk_no} Done')
 				chunk_no += 1
@@ -226,6 +227,7 @@ def etl_imdb(cursor, dataset):
 				cursor.executemany(insert_person, insert_person_vals)
 				cursor.executemany(insert_profession, insert_profession_vals)
 				cursor.executemany(insert_top_titles, insert_top_titles_vals)
+				imdb.commit()
 
 				print(f'name.basics Chunk #{chunk_no} Done')
 				chunk_no += 1
@@ -262,6 +264,7 @@ def etl_imdb(cursor, dataset):
 							insert_vals.append((row[0], writer, 'writer'))
 				
 				cursor.executemany(insert_crew, insert_vals)
+				imdb.commit()
 
 				print(f'title.crew Chunk #{chunk_no} Done')
 				chunk_no += 1
@@ -286,6 +289,7 @@ def etl_imdb(cursor, dataset):
 					insert_vals.append((row[0], row[1], season_no, episode_no))
 				
 				cursor.executemany(insert_crew, insert_vals)
+				imdb.commit()
 				
 				print(f'title.episode Chunk #{chunk_no} Done')
 				chunk_no += 1
@@ -305,6 +309,7 @@ def etl_imdb(cursor, dataset):
 				award += (i,)
 				i += 1
 				cursor.execute(insert_award, award)
+			imdb.commit()
 			print("awards Completed")
 
 			insert_oscar = "INSERT IGNORE INTO FactOscarAwards (title_key, person_key, is_winner, award_category_key, ceremony_year) VALUES (%s, %s, %s, %s, %s)"
@@ -323,7 +328,8 @@ def etl_imdb(cursor, dataset):
 					else:
 						insert_vals.append((row[4] if type(row[4]) == str else None, None, row[6], AWARD_DATA[award], year))
 
-				cursor.executemany(insert_oscar, insert_vals)		
+				cursor.executemany(insert_oscar, insert_vals)
+				imdb.commit()		
 				
 				print(f'oscar_data Chunk #{chunk_no} Done')
 				chunk_no += 1
@@ -353,6 +359,7 @@ def etl_imdb(cursor, dataset):
 							
 				cursor.executemany(insert_ratings, insert_ratings_vals)
 				cursor.executemany(insert_performance, insert_performance_vals)
+				imdb.commit()
 
 				print(f'title.ratings Chunk #{chunk_no} Done')
 				chunk_no += 1
@@ -363,12 +370,12 @@ def time_elapsed(s_time):
 	print(f"Time Elapsed: {e_time} seconds")
 
 
-def etl_controller(cursor, val):
+def etl_controller(cursor, val, imdb):
 	match val:
 		case "genre_profession":
 			etl_misc(cursor)
 		case _:
-			etl_imdb(cursor, val)
+			etl_imdb(cursor, val, imdb)
 
 
 if __name__ == '__main__':
@@ -407,12 +414,12 @@ if __name__ == '__main__':
 	s_time = time.time()
 
 	if val >= 1 and val <= 8:
-		etl_controller(cursorObject, datasets[val - 1])
+		etl_controller(cursorObject, datasets[val - 1], imdb)
 		time_elapsed(s_time)
 		imdb.commit()
 	elif val == 9:
 		for data in datasets:
-			etl_controller(cursorObject, data)
+			etl_controller(cursorObject, data, imdb)
 			time_elapsed(s_time)
 			imdb.commit()
 
