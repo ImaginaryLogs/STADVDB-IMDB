@@ -44,7 +44,6 @@ title_type VARCHAR(25) NOT NULL,
 release_year INT NOT NULL,
 end_year INT,  
 genre VARCHAR(32) NOT NULL,
-top_titles VARCHAR(4096),
 runtime_minutes INT NOT NULL, 
 release_decade INT GENERATED ALWAYS AS (FLOOR(release_year / 16) * 16) STORED,
 isAdult BOOL NOT NULL
@@ -72,18 +71,8 @@ CREATE TABLE FactCrewPerformancePerFilmGenre (
     success_score FLOAT GENERATED ALWAYS AS (avg_rating * LOG(1 + num_votes)) STORED,
     release_year INT,
     FOREIGN KEY (title_key) REFERENCES DimTitle(title_key),
-    FOREIGN KEY (person_key) REFERENCES DimPerson(person_key),
+    FOREIGN KEY (person_key) REFERENCES DimPerson(person_key)
 )ENGINE=InnoDB;
-
-  
-  
-CREATE TABLE BridgePersonTopTitles (
-person_key VARCHAR(16) NOT NULL,
-title_key VARCHAR(16) NOT NULL,
-PRIMARY KEY (person_key, title_key),
-FOREIGN KEY (person_key) REFERENCES DimPerson(person_key),
-FOREIGN KEY (title_key) REFERENCES DimTitle(title_key)
-)ENGINE=InnoDB;  
 
 CREATE TABLE DimEpisode (
 episode_key VARCHAR(16) PRIMARY KEY,
@@ -110,6 +99,7 @@ title_key VARCHAR(16) NOT NULL,
 person_key VARCHAR(16) NOT NULL,
 category VARCHAR(64) NOT NULL,
 job VARCHAR(64),
+characters VARCHAR(1024),
 PRIMARY KEY  (title_key,person_key),
 FOREIGN KEY (person_key) REFERENCES DimPerson(person_key)
 )ENGINE=InnoDB;

@@ -10,9 +10,8 @@ CHUNK_SIZE = 200000
 IMDB_DATA = {
     "name_basics": "data/name.basics.tsv",
     "title_basics": "data/title.basics.tsv",
-    "title_crew": "data/title.crew.tsv",
+    "title_crew": "data/title.crew_members.tsv",
     "title_episode": "data/title.episode.tsv",
-    "title_principals": "data/title.principals.tsv",
     "title_ratings": "data/title.ratings.tsv",
     "oscar_data": "data/full_data.csv",
 }
@@ -99,7 +98,7 @@ AWARD_DATA = {}
 
 
 def get_genre(cursor, title_key):
-	select_genre = "SELECT genre_key FROM BridgeTitleGenre WHERE title_key = %s"
+	select_genre = "SELECT genre FROM BridgeTitleGenre WHERE title_key = %s"
 	select_val = (title_key, )
 	cursor.execute(select_genre, select_val)
 	return cursor.fetchall()
@@ -124,7 +123,7 @@ def get_release_year(cursor, title_key):
 
 
 def etl_misc(cursor):
-	insert_genre = "INSERT INTO DimGenre (genre_key, genre_name) VALUES (%s, %s)"
+	insert_genre = "INSERT INTO DimGenre (genre, genre_name) VALUES (%s, %s)"
 	for i, val in GENRE_DATA.items():
 		insert_vals = (val, i)
 		cursor.execute(insert_genre, insert_vals)
@@ -142,7 +141,7 @@ def etl_imdb(cursor, dataset):
 	match dataset:
 		case "title_basics":
 			insert_title = "INSERT INTO DimTitle (title_key, primary_title, original_title, title_type, release_year, end_year, runtime_minutes, isAdult) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
-			insert_title_genre = "INSERT INTO BridgeTitleGenre (title_key, genre_key) VALUES (%s, %s)"
+			insert_title_genre = "INSERT INTO BridgeTitleGenre (title_key, genre) VALUES (%s, %s)"
 
 			for chunk in pd.read_csv(IMDB_DATA[dataset], sep='\t', chunksize=CHUNK_SIZE):
 				insert_title_vals = []
@@ -197,8 +196,6 @@ def etl_imdb(cursor, dataset):
 
 		case "name_basics":
 			insert_person = "INSERT INTO DimPerson (person_key, full_name, birth_year, death_year) VALUES (%s, %s, %s, %s)"
-			insert_profession = "INSERT INTO BridgePersonProfession (person_key, profession_key) VALUES (%s, %s)"
-			insert_top_titles = "INSERT INTO BridgePersonTopTitles (person_key, title_key) VALUES (%s, %s)"
 
 			for chunk in pd.read_csv(IMDB_DATA[dataset], sep='\t', chunksize=CHUNK_SIZE):
 				insert_person_vals = []
@@ -224,28 +221,12 @@ def etl_imdb(cursor, dataset):
 							insert_top_titles_vals.append((row[0], title))
 
 				cursor.executemany(insert_person, insert_person_vals)
-				cursor.executemany(insert_profession, insert_profession_vals)
-				cursor.executemany(insert_top_titles, insert_top_titles_vals)
 
 				print(f'name.basics Chunk #{chunk_no} Done')
 				chunk_no += 1
 		
-		case "title_principals":
-			insert_crew = "INSERT INTO BridgeCrew (title_key, person_key, category, job) VALUES (%s, %s, %s, %s)"
-
-			for chunk in pd.read_csv(IMDB_DATA[dataset], sep='\t', chunksize=CHUNK_SIZE, usecols=['tconst', 'nconst', 'category', 'job']):
-				insert_vals = []
-
-				for row in chunk.itertuples(index=False):
-					insert_vals.append((row[0], row[1], row[2], row[3]))
-				
-				cursor.executemany(insert_crew, insert_vals)
-				
-				print(f'title.principals Chunk #{chunk_no} Done')
-				chunk_no += 1
-
-		case "title_crew":
-			insert_crew = "INSERT IGNORE INTO BridgeCrew (title_key, person_key, category) VALUES (%s, %s, %s)"
+		case "title_crew_members":
+			insert_crew = "INSERT IGNORE INTO BridgeCrew (title_key, person_key, category,job,characters) VALUES (%s, %s, %s,%s,%s)"
 
 			for chunk in pd.read_csv(IMDB_DATA[dataset], sep='\t', chunksize=CHUNK_SIZE):
 				insert_vals = []
@@ -298,13 +279,8 @@ def etl_imdb(cursor, dataset):
 					if award not in awards:
 						awards.append(award)
 			
-			i = 1
 			insert_award = "INSERT INTO DimAwardCategory (class, canonical_category, category, award_category_key) VALUES (%s, %s, %s, %s)"
-			for award in awards:
-				AWARD_DATA.update({award: i})
-				award += (i,)
-				i += 1
-				cursor.execute(insert_award, award)
+			cursor.executemany(insert_award, awards)
 			print("awards Completed")
 
 			insert_oscar = "INSERT INTO FactOscarAwards (title_key, person_key, is_winner, award_category_key, ceremony_year) VALUES (%s, %s, %s, %s, %s)"
@@ -329,8 +305,8 @@ def etl_imdb(cursor, dataset):
 				chunk_no += 1
 
 		case "title_ratings":
-			insert_ratings = "INSERT INTO FactRatings (title_key, genre_key, episode_key, avg_rating, num_votes) VALUES (%s, %s, %s, %s, %s)"
-			insert_performance = "INSERT INTO FactCrewPerformancePerFilmGenre (title_key, person_key, genre_key, avg_rating, num_votes, release_year) VALUES (%s, %s, %s, %s, %s, %s)"
+			insert_ratings = "INSERT INTO FactRatings (title_key, genre, episode_key, avg_rating, num_votes) VALUES (%s, %s, %s, %s, %s)"
+			insert_performance = "INSERT INTO FactCrewPerformancePerFilmGenre (title_key, person_key, genre, avg_rating, num_votes, release_year) VALUES (%s, %s, %s, %s, %s, %s)"
 
 			for chunk in pd.read_csv(IMDB_DATA[dataset], sep='\t', chunksize=CHUNK_SIZE):
 				insert_ratings_vals = []
@@ -390,19 +366,18 @@ if __name__ == '__main__':
 	)
 
 	cursorObject = imdb.cursor()
-	datasets = ["genre_profession", "title_basics", "name_basics", "title_principals", "title_crew", "title_episode", "oscar_data", "title_ratings"]
+	datasets = ["genre_profession", "title_basics", "name_basics",  "title_crew_members", "title_episode", "oscar_data", "title_ratings"]
 
 	print("Select dataset to parse:")
 	print("(Parsing should be done in order)")
 	print("1 - Miscellaneous Data (DimGenres, DimProfessions)")
 	print("2 - title.basics.tsv (DimTitle, BridgeTitleGenre)")
 	print("3 - name.basics.tsv (DimPerson, BridgePersonProfession, BridgePersonTopTitles)")
-	print("4 - title.principals.tsv (BridgeCrew pt.1)")
-	print("5 - title.crew.tsv (BridgeCrew pt.2)")
-	print("6 - title.episode.tsv (DimEpisode)")
-	print("7 - full_data.csv (DimAwardCategory, FactOscarAwards)")
-	print("8 - title.ratings.tsv (FactRatings, FactCrewPerformancePerFilmGenre)")
-	print("9 - Run all datasets")
+	print("4 - title.crew_members.csv (BridgeCrew pt.2)")
+	print("5 - title.episode.tsv (DimEpisode)")
+	print("6 - full_data.csv (DimAwardCategory, FactOscarAwards)")
+	print("7 - title.ratings.tsv (FactRatings, FactCrewPerformancePerFilmGenre)")
+	print("8 - Run all datasets")
 
 	s_time = time.time()
 
