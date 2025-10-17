@@ -1,6 +1,9 @@
 from dotenv import load_dotenv
 import os
 import mysql.connector
+import time
+import queue
+from multiprocessing import Pool
 
 USER_PROMPT = [
    "Select dataset to parse, given parsing should be in order:"
@@ -13,8 +16,9 @@ USER_PROMPT = [
   ,"  7 - full_data.csv (DimAwardCategory, FactOscarAwards)"
   ,"  8 - title.ratings.tsv (FactRatings, FactCrewPerformancePerFilmGenre)"
   ,"  9 - Run all datasets"
-  
 ]
+
+WORKER_THREADS = 8
 
 def get_imdb():
   load_dotenv()
@@ -39,18 +43,40 @@ def get_initial_datasets():
   datasets = ["genre_profession", "title_basics", "name_basics", "title_principals", "title_crew", "title_episode", "oscar_data", "title_ratings"]
   return datasets
 
+def pd_writer(cursor, dataset, imdb):
+  print("Chiii~ yo chiyo chiyo chiyo no o, doooki doki doki doki dooo~? ki???\nChiii~ yo chiyo chiyo chiyo no o, suuuki suki suki shugi chiyo no o" + "\n" + dataset)
 
 
+def dispatcher(datasets: list[str], imdb, cursor):
+  work_queue = queue.Queue()
+  pd_writer_wraper = lambda dataset : pd_writer(cursor, dataset, imdb)
+  
+  for dataset in datasets:
+    work_queue.put(dataset)
+    
+  with Pool(WORKER_THREADS) as worker:
+    worker.map(pd_writer_wraper, work_queue.get())
+  
+  
+
+def commandhandler(val: int, datasets: list[str], imdb, imdb_cursor):
+  match val:
+    case 9:
+      dispatcher(datasets, imdb, imdb)
+  
 
 def queen_assigner():
   imdb = get_imdb()
   
   datasets = get_initial_datasets()
   
+  print(USER_PROMPT, sep = "\n")
+  val = int(input("> "))
+  commandhandler(val, datasets, imdb, imdb.cursor())
+  s_time = time.time()
+
+  
   imdb.close()
   
   
-  
-if __name__ == '__main__':
-  queen_assigner()
-  
+queen_assigner()
