@@ -1,3 +1,7 @@
+-- small notes:
+-- genre is 28 characters one hot encoded (true/false)
+-- profession is 46 characters on hot encoded (true/false) 
+
 DROP SCHEMA IF EXISTS imdb;
 CREATE SCHEMA imdb;
 
@@ -12,22 +16,15 @@ CREATE TABLE DimPerson (
 person_key VARCHAR(16) NOT NULL PRIMARY KEY,
 full_name VARCHAR(128) NOT NULL,
 birth_year INT NOT NULL,
-death_year INT
+death_year INT,
+profession VARCHAR(48)
 )ENGINE=InnoDB;
   
 CREATE TABLE DimProfession (
 profession_key TINYINT NOT NULL PRIMARY KEY,
 profession_name VARCHAR(64)
 )ENGINE=InnoDB;  
-  
-CREATE TABLE BridgePersonProfession (  
-	person_key VARCHAR(16) NOT NULL,  
-	profession_key TINYINT NOT NULL,  
-	PRIMARY KEY (person_key, profession_key),  
-	FOREIGN KEY (person_key) REFERENCES DimPerson(person_key),  
-	FOREIGN KEY (profession_key) REFERENCES DimProfession(profession_key)
-)ENGINE=InnoDB;  
-  
+
 
 
 CREATE TABLE DimAwardCategory (
@@ -39,7 +36,6 @@ CREATE TABLE DimAwardCategory (
 
 
 
-
 CREATE TABLE DimTitle (
 title_key VARCHAR(16) NOT NULL PRIMARY KEY,
 primary_title VARCHAR(512) NOT NULL,
@@ -47,6 +43,7 @@ original_title VARCHAR(512),
 title_type VARCHAR(25) NOT NULL,
 release_year INT NOT NULL,
 end_year INT,  
+genre VARCHAR(32) NOT NULL,
 runtime_minutes INT NOT NULL, 
 release_decade INT GENERATED ALWAYS AS (FLOOR(release_year / 16) * 16) STORED,
 isAdult BOOL NOT NULL
@@ -68,23 +65,16 @@ CREATE TABLE FactCrewPerformancePerFilmGenre (
     fact_key BIGINT AUTO_INCREMENT PRIMARY KEY,
     title_key VARCHAR(16) NOT NULL,
     person_key VARCHAR(16) NOT NULL,
-    genre_key TINYINT NOT NULL,
+    genre_key VARCHAR(32) NOT NULL,
     avg_rating FLOAT,
     num_votes INT,
     success_score FLOAT GENERATED ALWAYS AS (avg_rating * LOG(1 + num_votes)) STORED,
     release_year INT,
     FOREIGN KEY (title_key) REFERENCES DimTitle(title_key),
     FOREIGN KEY (person_key) REFERENCES DimPerson(person_key),
-    FOREIGN KEY (genre_key) REFERENCES DimGenre(genre_key)
 )ENGINE=InnoDB;
 
-  CREATE TABLE BridgeTitleGenre (
-title_key VARCHAR(16) NOT NULL,
-genre_key TINYINT NOT NULL,
-PRIMARY KEY (title_key, genre_key),
-FOREIGN KEY (title_key) REFERENCES DimTitle(title_key),
-FOREIGN KEY (genre_key) REFERENCES DimGenre(genre_key)
-)ENGINE=InnoDB;  
+  
   
 CREATE TABLE BridgePersonTopTitles (
 person_key VARCHAR(16) NOT NULL,
@@ -106,13 +96,12 @@ UNIQUE(title_key, season_number, episode_number)
 CREATE TABLE FactRatings (
 	fact_id BIGINT AUTO_INCREMENT NOT NULL PRIMARY KEY,
 	title_key VARCHAR(16) NOT NULL,
-	genre_key TINYINT NOT NULL,
+	genre_key VARCHAR(32),
 	episode_key VARCHAR(16),
 	avg_rating FLOAT,
 	num_votes INT,
 	FOREIGN KEY (title_key) REFERENCES DimTitle(title_key),
 	FOREIGN KEY (episode_key) REFERENCES DimEpisode(episode_key),
-	FOREIGN KEY (genre_key) REFERENCES DimGenre(genre_key)
 )ENGINE=InnoDB;
 
 CREATE TABLE BridgeCrew (
