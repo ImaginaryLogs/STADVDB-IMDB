@@ -8,24 +8,22 @@ CREATE SCHEMA imdb;
 
 use imdb;
 CREATE TABLE DimGenre (
-genre_key TINYINT NOT NULL PRIMARY KEY,
-genre_name VARCHAR(11) NOT NULL
+	genre_key TINYINT NOT NULL PRIMARY KEY,
+	genre_name VARCHAR(11) NOT NULL
 )ENGINE=InnoDB;  
   
 CREATE TABLE DimPerson (
-person_key VARCHAR(16) NOT NULL PRIMARY KEY,
-full_name VARCHAR(128) NOT NULL,
-birth_year INT NOT NULL,
-death_year INT,
-profession VARCHAR(48)
+	person_key VARCHAR(16) NOT NULL PRIMARY KEY,
+	full_name VARCHAR(128) NOT NULL,
+	birth_year INT NOT NULL,
+	death_year INT,
+	profession VARCHAR(48)
 )ENGINE=InnoDB;
   
 CREATE TABLE DimProfession (
-profession_key TINYINT NOT NULL PRIMARY KEY,
-profession_name VARCHAR(64)
+	profession_key TINYINT NOT NULL PRIMARY KEY,
+	profession_name VARCHAR(64)
 )ENGINE=InnoDB;  
-
-
 
 CREATE TABLE DimAwardCategory (
     award_category_key BIGINT PRIMARY KEY,
@@ -75,12 +73,12 @@ CREATE TABLE FactCrewPerformancePerFilmGenre (
 )ENGINE=InnoDB;
 
 CREATE TABLE DimEpisode (
-episode_key VARCHAR(16) PRIMARY KEY,
-title_key VARCHAR(16) NOT NULL,
-season_number INT,
-episode_number INT,  
-FOREIGN KEY (title_key) REFERENCES DimTitle(title_key),
-UNIQUE(title_key, season_number, episode_number)
+	episode_key VARCHAR(16) PRIMARY KEY,
+	title_key VARCHAR(16) NOT NULL,
+	season_number INT,
+	episode_number INT,  
+	FOREIGN KEY (title_key) REFERENCES DimTitle(title_key),
+	UNIQUE(title_key, season_number, episode_number)
 )ENGINE=InnoDB;
 
 CREATE TABLE FactRatings (
