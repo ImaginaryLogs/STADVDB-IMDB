@@ -7,15 +7,17 @@ import time
 val = int(input("> "))
 
 CHUNK_SIZE = 100000
+
 IMDB_DATA = {
-    "name_basics": "data/name.basics.tsv",
-    "title_basics": "data/title.basics.tsv",
-    "title_crew": "data/title.crew.tsv",
-    "title_episode": "data/title.episode.tsv",
+    "name_basics": 			"data/name.basics.tsv",
+    "title_basics": 		"data/title.basics.tsv",
+    "title_crew": 			"data/title.crew.tsv",
+    "title_episode": 		"data/title.episode.tsv",
     "title_principals": "data/title.principals.tsv",
-    "title_ratings": "data/title.ratings.tsv",
-    "oscar_data": "data/full_data.csv",
+    "title_ratings": 		"data/title.ratings.tsv",
+    "oscar_data": 			"data/full_data.csv",
 }
+
 GENRE_DATA = {
     'Documentary': 1,
 	'Short': 2,
@@ -46,8 +48,9 @@ GENRE_DATA = {
 	'Reality-TV': 27,
 	'Adult': 28,
 }
+
 PROFESSION_DATA = {
-    'actor': 1,
+	'actor': 1,
 	'miscellaneous': 2,
 	'producer': 3,
 	'actress': 4,
@@ -94,6 +97,7 @@ PROFESSION_DATA = {
 	'production_department': 45,
 	'electrical_department': 46
 }
+
 AWARD_DATA = {}
 
 
@@ -369,8 +373,8 @@ if __name__ == '__main__':
 	DB_HOST = os.getenv('DB_HOST')
 	DB_PORT = os.getenv('DB_PORT')
 	DB_USER = os.getenv('DB_USER')
-	DB_PASSWORD = os.getenv('DB_PASSWORD')
 	DB_NAME = os.getenv('DB_NAME')
+	DB_PASSWORD = os.getenv('DB_PASSWORD')
 
 	imdb = mysql.connector.connect(
 		host=DB_HOST,
@@ -383,7 +387,7 @@ if __name__ == '__main__':
 
 	cursorObject = imdb.cursor()
 	datasets = ["genre_profession", "title_basics", "name_basics", "title_principals", "title_crew", "title_episode", "oscar_data", "title_ratings"]
-
+	
 	print("Select dataset to parse:")
 	print("(Parsing should be done in order)")
 	print("1 - Miscellaneous Data (DimGenres, DimProfessions)")

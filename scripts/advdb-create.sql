@@ -8,24 +8,22 @@ CREATE SCHEMA imdb;
 
 use imdb;
 CREATE TABLE DimGenre (
-genre_key TINYINT NOT NULL PRIMARY KEY,
-genre_name VARCHAR(11) NOT NULL
+	genre_key TINYINT NOT NULL PRIMARY KEY,
+	genre_name VARCHAR(11) NOT NULL
 )ENGINE=InnoDB;  
   
 CREATE TABLE DimPerson (
-person_key VARCHAR(16) NOT NULL PRIMARY KEY,
-full_name VARCHAR(128) NOT NULL,
-birth_year INT NOT NULL,
-death_year INT,
-profession VARCHAR(48)
+	person_key VARCHAR(16) NOT NULL PRIMARY KEY,
+	full_name VARCHAR(128) NOT NULL,
+	birth_year INT NOT NULL,
+	death_year INT,
+	profession VARCHAR(48)
 )ENGINE=InnoDB;
   
 CREATE TABLE DimProfession (
-profession_key TINYINT NOT NULL PRIMARY KEY,
-profession_name VARCHAR(64)
+	profession_key TINYINT NOT NULL PRIMARY KEY,
+	profession_name VARCHAR(64)
 )ENGINE=InnoDB;  
-
-
 
 CREATE TABLE DimAwardCategory (
     award_category_key BIGINT PRIMARY KEY,
@@ -37,17 +35,17 @@ CREATE TABLE DimAwardCategory (
 
 
 CREATE TABLE DimTitle (
-title_key VARCHAR(16) NOT NULL PRIMARY KEY,
-primary_title VARCHAR(512) NOT NULL,
-original_title VARCHAR(512),
-title_type VARCHAR(25) NOT NULL,
-release_year INT NOT NULL,
-end_year INT,  
-genre VARCHAR(32) NOT NULL,
-top_titles VARCHAR(4096),
-runtime_minutes INT NOT NULL, 
-release_decade INT GENERATED ALWAYS AS (FLOOR(release_year / 16) * 16) STORED,
-isAdult BOOL NOT NULL
+	title_key VARCHAR(16) NOT NULL PRIMARY KEY,
+	primary_title VARCHAR(512) NOT NULL,
+	original_title VARCHAR(512),
+	title_type VARCHAR(25) NOT NULL,
+	release_year INT NOT NULL,
+	end_year INT,  
+	genre VARCHAR(32) NOT NULL,
+	top_titles VARCHAR(4096),
+	runtime_minutes INT NOT NULL, 
+	release_decade INT GENERATED ALWAYS AS (FLOOR(release_year / 16) * 16) STORED,
+	isAdult BOOL NOT NULL
 )ENGINE=InnoDB;  
 
 CREATE TABLE FactOscarAwards (
@@ -63,35 +61,35 @@ CREATE TABLE FactOscarAwards (
 )ENGINE=InnoDB;
 
 CREATE TABLE FactCrewPerformancePerFilmGenre (
-    fact_key BIGINT AUTO_INCREMENT PRIMARY KEY,
-    title_key VARCHAR(16) NOT NULL,
-    person_key VARCHAR(16) NOT NULL,
-    genre_key VARCHAR(32) NOT NULL,
-    avg_rating FLOAT,
-    num_votes INT,
-    success_score FLOAT GENERATED ALWAYS AS (avg_rating * LOG(1 + num_votes)) STORED,
-    release_year INT,
-    FOREIGN KEY (title_key) REFERENCES DimTitle(title_key),
-    FOREIGN KEY (person_key) REFERENCES DimPerson(person_key),
+	fact_key BIGINT AUTO_INCREMENT PRIMARY KEY,
+	title_key VARCHAR(16) NOT NULL,
+	person_key VARCHAR(16) NOT NULL,
+	genre_key VARCHAR(32) NOT NULL,
+	avg_rating FLOAT,
+	num_votes INT,
+	success_score FLOAT GENERATED ALWAYS AS (avg_rating * LOG(1 + num_votes)) STORED,
+	release_year INT,
+	FOREIGN KEY (title_key) REFERENCES DimTitle(title_key),
+	FOREIGN KEY (person_key) REFERENCES DimPerson(person_key),
 )ENGINE=InnoDB;
 
   
   
 CREATE TABLE BridgePersonTopTitles (
-person_key VARCHAR(16) NOT NULL,
-title_key VARCHAR(16) NOT NULL,
-PRIMARY KEY (person_key, title_key),
-FOREIGN KEY (person_key) REFERENCES DimPerson(person_key),
-FOREIGN KEY (title_key) REFERENCES DimTitle(title_key)
+	person_key VARCHAR(16) NOT NULL,
+	title_key VARCHAR(16) NOT NULL,
+	PRIMARY KEY (person_key, title_key),
+	FOREIGN KEY (person_key) REFERENCES DimPerson(person_key),
+	FOREIGN KEY (title_key) REFERENCES DimTitle(title_key)
 )ENGINE=InnoDB;  
 
 CREATE TABLE DimEpisode (
-episode_key VARCHAR(16) PRIMARY KEY,
-title_key VARCHAR(16) NOT NULL,
-season_number INT,
-episode_number INT,  
-FOREIGN KEY (title_key) REFERENCES DimTitle(title_key),
-UNIQUE(title_key, season_number, episode_number)
+	episode_key VARCHAR(16) PRIMARY KEY,
+	title_key VARCHAR(16) NOT NULL,
+	season_number INT,
+	episode_number INT,  
+	FOREIGN KEY (title_key) REFERENCES DimTitle(title_key),
+	UNIQUE(title_key, season_number, episode_number)
 )ENGINE=InnoDB;
 
 CREATE TABLE FactRatings (
@@ -106,12 +104,12 @@ CREATE TABLE FactRatings (
 )ENGINE=InnoDB;
 
 CREATE TABLE BridgeCrew (
-title_key VARCHAR(16) NOT NULL,
-person_key VARCHAR(16) NOT NULL,
-category VARCHAR(64) NOT NULL,
-job VARCHAR(64),
-PRIMARY KEY  (title_key,person_key),
-FOREIGN KEY (person_key) REFERENCES DimPerson(person_key)
+	title_key VARCHAR(16) NOT NULL,
+	person_key VARCHAR(16) NOT NULL,
+	category VARCHAR(64) NOT NULL,
+	job VARCHAR(64),
+	PRIMARY KEY  (title_key,person_key),
+	FOREIGN KEY (person_key) REFERENCES DimPerson(person_key)
 )ENGINE=InnoDB;
 
 CREATE INDEX idx_factratings_title ON FactRatings(title_key);
