@@ -45,7 +45,6 @@ GENRE_DATA = {
 	'Game-Show': 26,
 	'Reality-TV': 27,
 	'Adult': 28,
-	'N/A': 0
 }
 PROFESSION_DATA = {
     'actor': 1,
@@ -141,16 +140,22 @@ def etl_imdb(cursor, dataset, imdb):
 	chunk_no = 1
 	match dataset:
 		case "title_basics":
-			insert_title = "INSERT IGNORE INTO DimTitle (title_key, primary_title, original_title, title_type, release_year, end_year, runtime_minutes, isAdult) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
-			insert_title_genre = "INSERT IGNORE INTO BridgeTitleGenre (title_key, genre_key) VALUES (%s, %s)"
+			insert_title = "INSERT IGNORE INTO DimTitle (title_key, primary_title, original_title, title_type, release_year, end_year, genre, runtime_minutes, isAdult) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
 
 			for chunk in pd.read_csv(IMDB_DATA[dataset], sep='\t', chunksize=CHUNK_SIZE):
 				insert_title_vals = []
-				insert_title_genre_vals = []
 
 				chunk['isAdult'] = chunk['isAdult'] == 1
 
 				for row in chunk.itertuples(index=False):
+					one_hot_genres = ['F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F']
+										
+					if type(row[8]) == str:
+						genres = row[8].split(',')
+						for genre in genres:
+							if genre != '\\N':
+								one_hot_genres[GENRE_DATA[genre] - 1] = 'T'
+
 					try:
 						release_year = int(row[5])
 					except:
@@ -173,60 +178,40 @@ def etl_imdb(cursor, dataset, imdb):
 						row[1],
 						release_year, 
 						end_year,
+						''.join(one_hot_genres),
 						runtime_minutes,
 						row[4]
 					))
 
-					na_flag = 1
-					
-					if type(row[8]) == str:
-						genres = row[8].split(',')
-						for genre in genres:
-							if genre != '\\N':
-								na_flag = 0
-								insert_title_genre_vals.append((row[0], GENRE_DATA[genre]))
-						
-					if na_flag:
-						insert_title_genre_vals.append((row[0], 0))
-
 				cursor.executemany(insert_title, insert_title_vals)
-				cursor.executemany(insert_title_genre, insert_title_genre_vals)
 				imdb.commit()
 
 				print(f'title.basics Chunk #{chunk_no} Done')
 				chunk_no += 1
 
 		case "name_basics":
-			insert_person = "INSERT IGNORE INTO DimPerson (person_key, full_name, birth_year, death_year) VALUES (%s, %s, %s, %s)"
-			insert_profession = "INSERT IGNORE INTO BridgePersonProfession (person_key, profession_key) VALUES (%s, %s)"
-			insert_top_titles = "INSERT IGNORE INTO BridgePersonTopTitles (person_key, title_key) VALUES (%s, %s)"
+			insert_person = "INSERT IGNORE INTO DimPerson (person_key, full_name, birth_year, death_year, profession) VALUES (%s, %s, %s, %s, %s)"
 
 			for chunk in pd.read_csv(IMDB_DATA[dataset], sep='\t', chunksize=CHUNK_SIZE):
 				insert_person_vals = []
-				insert_profession_vals = []
-				insert_top_titles_vals = []
 
 				for row in chunk.itertuples(index=False):
-					insert_person_vals.append((
-						row[0], 
-						row[1] if type(row[1]) == str else 'Unknown', 
-						int(row[2]) if row[2] != '\\N' else 0, 
-						int(row[3]) if row[3] != '\\N' else None
-					))
+					one_hot_professions = ['F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F','F']
 
 					professions = row[4].split(',')
 					for profession in professions:
 						if profession != '\\N':
-							insert_profession_vals.append((row[0], PROFESSION_DATA[profession]))
+							one_hot_professions[PROFESSION_DATA[profession]] = 'T'
 
-					titles = row[5].split(',')
-					for title in titles:
-						if title != '\\N':
-							insert_top_titles_vals.append((row[0], title))
+					insert_person_vals.append((
+						row[0], 
+						row[1] if type(row[1]) == str else 'Unknown', 
+						int(row[2]) if row[2] != '\\N' else 0, 
+						int(row[3]) if row[3] != '\\N' else None,
+						''.join(one_hot_professions)
+					))
 
 				cursor.executemany(insert_person, insert_person_vals)
-				cursor.executemany(insert_profession, insert_profession_vals)
-				cursor.executemany(insert_top_titles, insert_top_titles_vals)
 				imdb.commit()
 
 				print(f'name.basics Chunk #{chunk_no} Done')
