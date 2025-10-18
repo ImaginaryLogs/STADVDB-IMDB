@@ -56,7 +56,7 @@ CREATE TABLE FactCrewPerformancePerFilmGenre (
 	fact_key BIGINT AUTO_INCREMENT PRIMARY KEY,
 	title_key VARCHAR(16) NOT NULL,
 	person_key VARCHAR(16) NOT NULL,
-	genre_key VARCHAR(32) NOT NULL,
+	genre VARCHAR(32) NOT NULL,
 	avg_rating FLOAT,
 	num_votes INT,
 	success_score FLOAT GENERATED ALWAYS AS (avg_rating * LOG(1 + num_votes)) STORED,
@@ -77,7 +77,7 @@ CREATE TABLE DimEpisode (
 CREATE TABLE FactRatings (
 	fact_id BIGINT AUTO_INCREMENT NOT NULL PRIMARY KEY,
 	title_key VARCHAR(16) NOT NULL,
-	genre_key VARCHAR(32),
+	genre VARCHAR(32),
 	episode_key VARCHAR(16),
 	avg_rating FLOAT,
 	num_votes INT,
@@ -96,9 +96,8 @@ CREATE TABLE BridgeCrew (
 )ENGINE=InnoDB;
 
 CREATE INDEX idx_factratings_title ON FactRatings(title_key);
-CREATE INDEX idx_factratings_genre ON FactRatings(genre_key);
 CREATE INDEX idx_factoscar_person ON FactOscarAwards(person_key);
-CREATE INDEX idx_ftcgp_genre_year ON FactCrewPerformancePerFilmGenre (genre_key, release_year);
+CREATE INDEX idx_ftcgp_genre_year ON FactCrewPerformancePerFilmGenre (release_year);
 
 
 
