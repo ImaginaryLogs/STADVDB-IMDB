@@ -26,7 +26,7 @@ CREATE TABLE DimProfession (
 )ENGINE=InnoDB;  
 
 CREATE TABLE DimAwardCategory (
-	award_category_key BIGINT PRIMARY KEY,
+	award_category_key BIGINT AUTO_INCREMENT NOT NULL PRIMARY KEY,
 	class VARCHAR(64),
 	canonical_category VARCHAR(255),
 	category VARCHAR(255)
