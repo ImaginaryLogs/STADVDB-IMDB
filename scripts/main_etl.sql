@@ -29,56 +29,106 @@ INSERT INTO imdb.DimGenre (genre_name, genre_key) VALUES
 ('Reality-TV', 27),
 ('Adult', 28);
 
-INSERT INTO DimTitle(title_key,title_type,primary_title,original_title,release_year,end_year,genre,runtime_minutes)
-SELECT 
-tconst,titleType,primaryTitle,originalTitle,startYear,endYear,
-(
-    CREATE TEMPORARY TABLE genre_chars AS SELECT * FROM DimGenre;
-    ALTER TABLE genre_chars ADD COLUMN has_genre VARCHAR(1) DEFAULT 'F';
-	
-    WHILE genre IS NOT NULL AND genre != '' 
-	SET pos = LOCATE(',',genre);
-	IF pos > 0 THEN
-		SET curr_genre = TRIM(SUBSTRING(input, 1, pos - 1));
-		SET genre = SUBSTRING(input, pos + 1);
-        IF genre IN genre_chars THEN 
-            SET has_genre = 'T' WHERE genre=genre_name;
+
+-- title.basics (DimTitle)
+DROP FUNCTION IF EXISTS one_hot_encode_genres;
+
+DELIMITER //
+CREATE FUNCTION one_hot_encode_genres(input_genre VARCHAR(255))
+RETURNS VARCHAR(32)
+DETERMINISTIC
+BEGIN
+	DECLARE genres VARCHAR(256) DEFAULT 'Documentary,Short,Animation,Comedy,Romance,Sport,News,Drama,Fantasy,Horror,Biography,Music,War,Crime,Western,Family,Adventure,Action,History,Mystery,Sci-Fi,Musical,Thriller,Film-Noir,Talk-Show,Game-Show,Reality-TV,Adult';
+	DECLARE genre VARCHAR(32);
+    DECLARE i INT DEFAULT 1;
+    DECLARE genres_size INT DEFAULT 28;
+    DECLARE ohe VARCHAR(32) DEFAULT '';
+        
+    WHILE i <= genres_size DO
+        SET genre = TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(genres, ',', i), ',', -1));
+        
+        IF FIND_IN_SET(genre, input_genre) > 0 THEN
+            SET ohe = CONCAT(ohe, 'T');
+        ELSE
+            SET ohe = CONCAT(ohe, 'F');
         END IF;
 
-		
-	ELSE
-		SET curr_genre = TRIM(genre)
-		SET genre = NULL
-	END IF;
+        SET i = i + 1;
     END WHILE;
+    
+    RETURN ohe;
+END //
+DELIMITER ;
 
-    SELECT GROUP_CONCAT(has_genre ORDER BY genre_name SEPARATOR '') AS one_hot_genre
-) AS genre, runtimeMinutes, SET isAdult = CASE WHEN LOWER(isAdult) = 'true' THEN 1 ELSE 0 END,
-FROM name_basics;
+INSERT INTO imdb.DimTitle(title_key,title_type,primary_title,original_title,release_year,end_year,genre,runtime_minutes,isAdult)
+SELECT 
+tb.tconst,tb.titleType,tb.primaryTitle,tb.originalTitle,tb.startYear,tb.endYear,(
+	SELECT one_hot_encode_genres(tb.genres)
+),tb.runtimeMinutes,tb.isAdult
+FROM imdb_source.title_basics tb;
 
-CREATE FUNCTION one_hot_encoding_genre(IN genres TEXT,IN input TEXT)
-RETURN VARCHAR(32)
+
+-- name.basics (DimPerson)
+DROP FUNCTION IF EXISTS one_hot_encode_professions;
+
+DELIMITER //
+CREATE FUNCTION one_hot_encode_professions(input_profession VARCHAR(255))
+RETURNS VARCHAR(64)
+DETERMINISTIC
 BEGIN
+	DECLARE professions VARCHAR(1024) DEFAULT 'actor,miscellaneous,producer,actress,soundtrack,archive_footage,music_department,writer,director,stunts,make_up_department,composer,assistant_director,camera_department,music_artist,art_department,editor,cinematographer,executive,visual_effects,costume_designer,script_department,art_director,editorial_department,costume_department,animation_department,talent_agent,archive_sound,production_designer,special_effects,manager,production_manager,sound_department,casting_department,location_management,casting_director,set_decorator,transportation_department,choreographer,legal,accountant,podcaster,publicist,assistant,production_department,electrical_department';
+	DECLARE profession VARCHAR(32);
+    DECLARE i INT DEFAULT 1;
+    DECLARE profession_size INT DEFAULT 46;
+    DECLARE ohe VARCHAR(64) DEFAULT '';
+        
+    WHILE i <= profession_size DO
+        SET profession = TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(professions, ',', i), ',', -1));
+        
+        IF FIND_IN_SET(profession, input_profession) > 0 THEN
+            SET ohe = CONCAT(ohe, 'T');
+        ELSE
+            SET ohe = CONCAT(ohe, 'F');
+        END IF;
 
-    WHILE input IS NOT NULL AND input != '' 
-    SET output = ''
-	SET pos = LOCATE(',',input);
-	IF pos > 0 THEN
-		SET genre = TRIM(SUBSTRING(input, 1, pos - 1));
-        SET genre_pos = LOCATE(',',genres);
-        SET curr_genre = SUBSTRING(genres,1,genre_pos-1);
-        WHILE genre_pos > 0 
-            IF curr_genre = genre THEN
-            CONCAT(output,'T')
-            ELSE
-            CONCAT(output,'F')
-            END IF;
-            END WHILE;
-
-		
-	ELSE
-		SET input = NULL
-	END IF;
+        SET i = i + 1;
     END WHILE;
+    
+    RETURN ohe;
+END //
+DELIMITER ;
 
-END
+INSERT INTO imdb.DimPerson(person_key,full_name,birth_year,death_year,profession)
+SELECT nb.nconst,nb.primaryName,nb.birthYear,nb.deathYear,(
+	SELECT one_hot_encode_professions(nb.primaryProfession)
+) FROM imdb_source.name_basics nb;
+
+
+-- title.episode (DimEpisode)
+INSERT INTO imdb.DimEpisode(episode_key, title_key, season_number, episode_number)
+SELECT tconst, parenttconst, seasonNumber, episodeNumber FROM imdb_source.title_episode;
+
+
+-- full_data (FactOscarAwards)
+INSERT INTO imdb.FactOscarAwards(title_key,person_key,is_winner,class,canonical_category,category,ceremony_year)
+WITH RECURSIVE split_nominees AS (
+	SELECT
+		oa.filmId AS title_key,
+		TRIM(SUBSTRING_INDEX(oa.nomineeIds, ',', 1)) AS person_key,
+		IF(oa.winner = 'True',1,0) AS is_winner,
+		oa.class AS class,
+		oa.canonicalCategory AS canonical_category,
+		oa.category AS category,
+		TRIM(SUBSTRING_INDEX(oa.year, '/', 1)) AS ceremony_year,
+		SUBSTRING(oa.nomineeIds, LENGTH(SUBSTRING_INDEX(oa.nomineeIds, ',', 1)) + 2) AS remaining
+	FROM imdb_source.oscar_awards oa
+	UNION ALL
+	SELECT
+		title_key, TRIM(SUBSTRING_INDEX(remaining, ',', 1)), is_winner, class, canonical_category, category, ceremony_year,
+    	SUBSTRING(remaining, LENGTH(SUBSTRING_INDEX(remaining, ',', 1)) + 2)
+    FROM split_nominees
+    WHERE remaining <> ''
+)
+SELECT title_key, person_key, is_winner, class, canonical_category, category, ceremony_year 
+FROM split_nominees
+WHERE person_key <> '' AND person_key <> '?';
