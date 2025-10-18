@@ -55,3 +55,30 @@ tconst,titleType,primaryTitle,originalTitle,startYear,endYear,
     SELECT GROUP_CONCAT(has_genre ORDER BY genre_name SEPARATOR '') AS one_hot_genre
 ) AS genre, runtimeMinutes, SET isAdult = CASE WHEN LOWER(isAdult) = 'true' THEN 1 ELSE 0 END,
 FROM name_basics;
+
+CREATE FUNCTION one_hot_encoding_genre(IN genres TEXT,IN input TEXT)
+RETURN VARCHAR(32)
+BEGIN
+
+    WHILE input IS NOT NULL AND input != '' 
+    SET output = ''
+	SET pos = LOCATE(',',input);
+	IF pos > 0 THEN
+		SET genre = TRIM(SUBSTRING(input, 1, pos - 1));
+        SET genre_pos = LOCATE(',',genres);
+        SET curr_genre = SUBSTRING(genres,1,genre_pos-1);
+        WHILE genre_pos > 0 
+            IF curr_genre = genre THEN
+            CONCAT(output,'T')
+            ELSE
+            CONCAT(output,'F')
+            END IF;
+            END WHILE;
+
+		
+	ELSE
+		SET input = NULL
+	END IF;
+    END WHILE;
+
+END
