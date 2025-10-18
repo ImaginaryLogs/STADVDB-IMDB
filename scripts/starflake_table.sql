@@ -25,14 +25,6 @@ CREATE TABLE DimProfession (
 	profession_name VARCHAR(64)
 )ENGINE=InnoDB;  
 
-CREATE TABLE DimAwardCategory (
-	award_category_key BIGINT AUTO_INCREMENT NOT NULL PRIMARY KEY,
-	class VARCHAR(64),
-	canonical_category VARCHAR(255),
-	category VARCHAR(255)
-)ENGINE=InnoDB;
-
-
 
 CREATE TABLE DimTitle (
 	title_key VARCHAR(16) NOT NULL PRIMARY KEY,
@@ -52,11 +44,12 @@ CREATE TABLE FactOscarAwards (
 	title_key VARCHAR(16),
 	person_key VARCHAR(16),
 	is_winner BOOL NOT NULL,
-	award_category_key BIGINT NOT NULL,
+	class VARCHAR(64),
+	canonical_category VARCHAR(255),
+	category VARCHAR(255),
 	ceremony_year INT,
 	FOREIGN KEY (title_key) REFERENCES DimTitle(title_key),
 	FOREIGN KEY (person_key) REFERENCES DimPerson(person_key),
-	FOREIGN KEY (award_category_key) REFERENCES DimAwardCategory(award_category_key)
 )ENGINE=InnoDB;
 
 CREATE TABLE FactCrewPerformancePerFilmGenre (
