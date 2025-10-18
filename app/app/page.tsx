@@ -82,8 +82,16 @@ export default function Dashboard() {
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "charts" | "testing">("overview");
   const [selectedActor, setSelectedActor] = useState("");
+  const [mounted, setMounted] = useState(false);
+
+  // Fix hydration - only render after component mounts
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
+    if (!mounted) return; // Don't fetch until mounted
+
     setLoading(true);
     fetch('/api')
       .then(async res => {
@@ -108,19 +116,27 @@ export default function Dashboard() {
       })
       .catch(err => {
         console.error('API error:', err);
-        setError('Failed to load data from CSV files');
+        setError('Failed to load data from database');
         setErrorDetails(err.message || 'Unknown error');
         setLoading(false);
       });
-  }, []);
+  }, [mounted]);
+
+  // Don't render until mounted to avoid hydration mismatch
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 flex items-center justify-center">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-4"></div>
-          <p className="text-xl font-semibold text-gray-700 dark:text-gray-200">Loading IMDb Analytics...</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Parsing CSV data</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-white text-xl">Loading IMDb Analytics...</p>
         </div>
       </div>
     );
@@ -128,110 +144,92 @@ export default function Dashboard() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-8 bg-gradient-to-br from-red-50 to-orange-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="max-w-2xl w-full">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 border-l-8 border-red-500">
-            <div className="flex items-center mb-4">
-              <svg className="w-12 h-12 text-red-500 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <h2 className="text-3xl font-bold text-gray-800 dark:text-white">Error Loading Data</h2>
-            </div>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">{error}</p>
-            {errorDetails && (
-              <div className="mb-6 p-4 bg-red-100 dark:bg-red-900/30 rounded-lg">
-                <p className="font-mono text-sm text-red-800 dark:text-red-200">{errorDetails}</p>
-              </div>
-            )}
-            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-              <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Troubleshooting:</p>
-              <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-300 space-y-1">
-                <li>Ensure sample_data folder exists in project root</li>
-                <li>Verify all required CSV files are present</li>
-                <li>Check terminal logs for detailed error messages</li>
-              </ul>
-            </div>
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 flex items-center justify-center p-4">
+        <div className="bg-red-900/50 border border-red-500 rounded-lg p-8 max-w-2xl">
+          <h2 className="text-white text-2xl font-bold mb-4">⚠️ Error Loading Data</h2>
+          <p className="text-red-200 mb-4">{error}</p>
+          {errorDetails && (
+            <details className="text-red-300 text-sm">
+              <summary className="cursor-pointer mb-2">Show Details</summary>
+              <pre className="bg-black/30 p-4 rounded overflow-auto">{errorDetails}</pre>
+            </details>
+          )}
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
   }
 
-  // Filter actor success data by selected actor
-  const actorSuccessData = stats.actorSuccessByYear.filter(d => d.actor === selectedActor);
-  const actorGenreData = stats.actorGenrePopularity.filter(d => d.actor === selectedActor);
-  const uniqueActors = [...new Set(stats.actorSuccessByYear.map(d => d.actor))];
+  const filteredActorData = stats.actorSuccessByYear.filter(d => d.actor === selectedActor);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
-                IMDb Analytics Dashboard
-              </h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                📊 Statistical analysis powered by CSV data • {stats.totalMovies.toLocaleString()} movies analyzed
-              </p>
-            </div>
-            <div className="hidden md:flex items-center space-x-4">
-              <div className="text-right">
-                <p className="text-xs text-gray-500 dark:text-gray-400">Correlation</p>
-                <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                  {stats.pearsonCorrelation?.toFixed(3) || 'N/A'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 p-8">
+      {/* Rest of your dashboard JSX stays the same */}
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-4xl font-bold text-white mb-8 text-center">
+          📊 IMDb Analytics Dashboard
+        </h1>
 
-      <div className="max-w-7xl mx-auto px-8 py-8">
-        {/* Navigation Tabs */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg mb-8 p-2">
-          <div className="flex gap-2">
-            {[
-              { id: "overview", label: "📈 Overview", icon: "📈" },
-              { id: "charts", label: "📊 Visualizations", icon: "📊" },
-              { id: "testing", label: "🧪 Statistical Tests", icon: "🧪" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex-1 px-6 py-4 font-semibold rounded-lg transition-all duration-200 ${
-                  activeTab === tab.id
-                    ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg transform scale-105"
-                    : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                }`}
-              >
-                <span className="text-xl mr-2">{tab.icon}</span>
-                {tab.label}
-              </button>
-            ))}
-          </div>
+        {/* Tabs */}
+        <div className="flex justify-center mb-8 space-x-4">
+          <button
+            onClick={() => setActiveTab("overview")}
+            className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+              activeTab === "overview"
+                ? "bg-blue-600 text-white shadow-lg"
+                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+            }`}
+          >
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab("charts")}
+            className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+              activeTab === "charts"
+                ? "bg-blue-600 text-white shadow-lg"
+                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+            }`}
+          >
+            Visualizations
+          </button>
+          <button
+            onClick={() => setActiveTab("testing")}
+            className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+              activeTab === "testing"
+                ? "bg-blue-600 text-white shadow-lg"
+                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+            }`}
+          >
+            Statistical Tests
+          </button>
         </div>
 
         {/* Overview Tab */}
         {activeTab === "overview" && (
-          <div className="space-y-8">
-            {/* Key Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[
-                { label: "Total Movies", value: stats.totalMovies, icon: "🎬", color: "from-blue-500 to-blue-600" },
-                { label: "Total Persons", value: stats.totalPersons, icon: "👥", color: "from-green-500 to-green-600" },
-                { label: "Total Awards", value: stats.totalAwards, icon: "🏆", color: "from-yellow-500 to-yellow-600" },
-                { label: "Avg Rating", value: stats.avgRating.toFixed(1), icon: "⭐", color: "from-purple-500 to-purple-600" },
-              ].map((metric, idx) => (
-                <div key={idx} className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 transform hover:scale-105 transition-transform duration-200">
-                  <div className={`w-12 h-12 bg-gradient-to-br ${metric.color} rounded-xl flex items-center justify-center text-2xl mb-4 shadow-lg`}>
-                    {metric.icon}
-                  </div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">{metric.label}</div>
-                  <div className="text-3xl font-bold text-gray-800 dark:text-white mt-2">{typeof metric.value === 'number' ? metric.value.toLocaleString() : metric.value}</div>
-                </div>
-              ))}
+          <div>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg p-6 shadow-xl">
+                <h3 className="text-blue-100 text-sm font-semibold mb-2">Total Movies</h3>
+                <p className="text-white text-3xl font-bold">{stats.totalMovies.toLocaleString()}</p>
+              </div>
+              <div className="bg-gradient-to-br from-green-500 to-green-700 rounded-lg p-6 shadow-xl">
+                <h3 className="text-green-100 text-sm font-semibold mb-2">Total Persons</h3>
+                <p className="text-white text-3xl font-bold">{stats.totalPersons.toLocaleString()}</p>
+              </div>
+              <div className="bg-gradient-to-br from-purple-500 to-purple-700 rounded-lg p-6 shadow-xl">
+                <h3 className="text-purple-100 text-sm font-semibold mb-2">Total Awards</h3>
+                <p className="text-white text-3xl font-bold">{stats.totalAwards.toLocaleString()}</p>
+              </div>
+              <div className="bg-gradient-to-br from-yellow-500 to-yellow-700 rounded-lg p-6 shadow-xl">
+                <h3 className="text-yellow-100 text-sm font-semibold mb-2">Avg Rating</h3>
+                <p className="text-white text-3xl font-bold">{stats.avgRating.toFixed(1)}</p>
+              </div>
             </div>
 
             {/* Content Grid */}
@@ -287,11 +285,11 @@ export default function Dashboard() {
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={stats.genreDistribution}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="name" tick={{ fill: '#6b7280', fontSize: 12 }} />
-                      <YAxis tick={{ fill: '#6b7280', fontSize: 12 }} />
+                      <XAxis dataKey="name" tick={{ fill: '#808080', fontSize: 12 }} />
+                      <YAxis tick={{ fill: '#808080', fontSize: 12 }} />
                       <Tooltip 
                         contentStyle={{ 
-                          backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+                          backgroundColor: 'rgba(100, 100, 100, 0.95)', 
                           border: 'none', 
                           borderRadius: '12px',
                           boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
@@ -361,7 +359,7 @@ export default function Dashboard() {
                       <YAxis tick={{ fill: '#6b7280', fontSize: 12 }} />
                       <Tooltip 
                         contentStyle={{ 
-                          backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+                          backgroundColor: 'rgba(100, 100, 100, 0.95)', 
                           border: 'none', 
                           borderRadius: '12px',
                           boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
@@ -395,19 +393,19 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
-              {uniqueActors.length > 0 ? (
+              {filteredActorData.length > 0 ? (
                 <>
                   <select 
                     value={selectedActor} 
                     onChange={(e) => setSelectedActor(e.target.value)}
                     className="w-full mb-4 p-3 border-2 border-gray-200 rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   >
-                    {uniqueActors.map(actor => (
-                      <option key={actor} value={actor}>{actor}</option>
+                    {stats.actorSuccessByYear.map(d => (
+                      <option key={d.actor} value={d.actor}>{d.actor}</option>
                     ))}
                   </select>
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={actorSuccessData}>
+                    <LineChart data={filteredActorData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis dataKey="year" tick={{ fill: '#6b7280' }} />
                       <YAxis yAxisId="left" tick={{ fill: '#6b7280' }} />
@@ -485,7 +483,7 @@ export default function Dashboard() {
                     <YAxis tick={{ fill: '#6b7280' }} />
                     <Tooltip 
                       contentStyle={{ 
-                        backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+                        backgroundColor: 'rgba(100, 100, 100, 0.95)', 
                         border: 'none', 
                         borderRadius: '12px',
                         boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
@@ -517,8 +515,9 @@ export default function Dashboard() {
                       data={stats.crewProfessionRatio}
                       cx="50%"
                       cy="50%"
+                      nameKey="profession"
                       labelLine={false}
-                      label={({ profession, percentage }) => `${profession} ${percentage.toFixed(0)}%`}
+                      label={({ name, percent }) => `${String(name)} ${(Number(percent ?? 0) * 100).toFixed(0)}%`}
                       outerRadius={100}
                       fill="#8884d8"
                       dataKey="percentage"
@@ -561,7 +560,7 @@ export default function Dashboard() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) => `${String(name)} ${(Number(percent ?? 0) * 100).toFixed(0)}%`}
                       outerRadius={100}
                       fill="#8884d8"
                       dataKey="value"
@@ -596,9 +595,9 @@ export default function Dashboard() {
                   <p className="text-xs text-gray-500 dark:text-gray-400">Genre preference by actor</p>
                 </div>
               </div>
-              {actorGenreData.length > 0 ? (
+              {filteredActorData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={actorGenreData}>
+                  <BarChart data={filteredActorData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <XAxis dataKey="genre" tick={{ fill: '#6b7280', fontSize: 11 }} />
                     <YAxis yAxisId="left" tick={{ fill: '#6b7280' }} />
@@ -675,7 +674,7 @@ export default function Dashboard() {
                     <Radar name="Actor Count" dataKey="actorCount" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.6} />
                     <Tooltip 
                       contentStyle={{ 
-                        backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+                        backgroundColor: 'rgba(100, 100, 100, 0.95)', 
                         border: 'none', 
                         borderRadius: '12px',
                         boxShadow: '0 10px 25px rgba(0,0,0,0.1)'

@@ -1,570 +1,444 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
-import { parse } from "csv-parse/sync";
+import { query } from "@/lib/db";
 
 export async function GET() {
   try {
-    const sampleDataPath = path.join(process.cwd(), "..", "sample_data");
+    console.log("Fetching data from MySQL database...");
+
+    // Test basic connection
+    const testQuery = await query<any>(`SELECT 1 as test`);
+    console.log("✓ Connection test passed");
+
+    // Check table counts
+    const [titleCount] = await query<any>(`SELECT COUNT(*) as count FROM DimTitle`);
+    const [personCount] = await query<any>(`SELECT COUNT(*) as count FROM DimPerson`);
+    const [ratingCount] = await query<any>(`SELECT COUNT(*) as count FROM FactRatings`);
     
-    console.log("Current working directory:", process.cwd());
-    console.log("Looking for sample_data at:", sampleDataPath);
-
-    // Read CSV files with tab delimiter (TSV format used by IMDB)
-    const nameBasics = parse(fs.readFileSync(path.join(sampleDataPath, "name.basics.csv"), "utf-8"), {
-      columns: true,
-      skip_empty_lines: true,
-      delimiter: '\t',
-      relax_column_count: true,
+    console.log("Table counts:", {
+      titles: titleCount?.count,
+      persons: personCount?.count,
+      ratings: ratingCount?.count
     });
-    console.log("Loaded name.basics:", nameBasics.length, "records");
-
-    const titleBasics = parse(fs.readFileSync(path.join(sampleDataPath, "title.basics.csv"), "utf-8"), {
-      columns: true,
-      skip_empty_lines: true,
-      delimiter: '\t',
-      relax_column_count: true,
-    });
-    console.log("Loaded title.basics:", titleBasics.length, "records");
-
-    const titleRatings = parse(fs.readFileSync(path.join(sampleDataPath, "title.ratings.csv"), "utf-8"), {
-      columns: true,
-      skip_empty_lines: true,
-      delimiter: '\t',
-      relax_column_count: true,
-    });
-    console.log("Loaded title.ratings:", titleRatings.length, "records");
-
-    const titlePrincipals = parse(fs.readFileSync(path.join(sampleDataPath, "title.principals.csv"), "utf-8"), {
-      columns: true,
-      skip_empty_lines: true,
-      delimiter: '\t',
-      relax_column_count: true,
-    });
-    console.log("Loaded title.principals:", titlePrincipals.length, "records");
-
-    const oscarData = parse(fs.readFileSync(path.join(sampleDataPath, "full_data.csv"), "utf-8"), {
-      columns: true,
-      skip_empty_lines: true,
-      delimiter: ',',
-      relax_column_count: true,
-    });
-    console.log("Loaded full_data:", oscarData.length, "records");
 
     // ===== BASIC STATISTICS =====
-    const totalMovies = titleBasics.length;
-    const totalPersons = nameBasics.length;
-    const totalAwards = oscarData.length;
+    const [statsRow] = await query<any>(`
+      SELECT 
+        COUNT(DISTINCT dt.title_key) as totalMovies,
+        COUNT(DISTINCT dp.person_key) as totalPersons,
+        AVG(fr.avg_rating) as avgRating
+      FROM DimTitle dt
+      LEFT JOIN FactRatings fr ON dt.title_key = fr.title_key
+      CROSS JOIN DimPerson dp
+      WHERE dt.title_type = 'movie'
+    `);
+
+    const [awardStats] = await query<any>(`SELECT COUNT(*) as totalAwards FROM FactOscarAwards`);
+
+    const totalMovies = statsRow?.totalMovies || 0;
+    const totalPersons = statsRow?.totalPersons || 0;
+    const totalAwards = awardStats?.totalAwards || 0;
+    const avgRating = parseFloat(statsRow?.avgRating) || 0;
+
+    console.log("Basic stats:", { totalMovies, totalPersons, totalAwards, avgRating });
+
+    // ===== 1. GENRE DISTRIBUTION =====
+    console.log("\n📊 Fetching genre distribution...");
     
-    const validRatings = titleRatings.filter((r: any) => r.averageRating && r.averageRating !== "\\N");
-    const avgRating = validRatings.length > 0 
-      ? validRatings.reduce((sum: number, r: any) => sum + parseFloat(r.averageRating), 0) / validRatings.length 
-      : 0;
+    // FIX: Join by genre_name instead of genre_key since genre field stores the name
+    const genreDistribution = await query<{ name: string; value: number }>(`
+      SELECT 
+        dg.genre_name as name,
+        COUNT(*) as value
+      FROM DimTitle dt
+      INNER JOIN DimGenre dg ON dt.genre = dg.genre_name
+      WHERE dt.title_type = 'movie'
+        AND dt.genre IS NOT NULL
+      GROUP BY dg.genre_name
+      ORDER BY value DESC
+      LIMIT 6
+    `);
+    console.log("Genre distribution result:", genreDistribution);
 
-    // ===== DESCRIPTIVE ANALYTICS =====
+    // ===== 2. RATINGS TREND BY YEAR =====
+    console.log("\n📈 Fetching ratings trend...");
     
-    // 1. Genre Distribution
-    const genreCounts: Record<string, number> = {};
-    titleBasics.forEach((movie: any) => {
-      if (movie.genres && movie.genres !== "\\N") {
-        movie.genres.split(",").forEach((genre: string) => {
-          const trimmedGenre = genre.trim();
-          genreCounts[trimmedGenre] = (genreCounts[trimmedGenre] || 0) + 1;
-        });
-      }
-    });
-    const genreDistribution = Object.entries(genreCounts)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 6);
+    const ratingsTrend = await query<{ year: number; avgRating: number; count: number }>(`
+      SELECT 
+        dt.release_year as year,
+        AVG(fr.avg_rating) as avgRating,
+        COUNT(DISTINCT dt.title_key) as count
+      FROM DimTitle dt
+      INNER JOIN FactRatings fr ON dt.title_key = fr.title_key
+      WHERE dt.title_type = 'movie'
+        AND dt.release_year BETWEEN 2018 AND 2025
+        AND fr.avg_rating IS NOT NULL
+      GROUP BY dt.release_year
+      ORDER BY dt.release_year ASC
+    `);
+    console.log("Ratings trend result:", ratingsTrend);
 
-    // 2. Ratings Trend by Year
-    const yearRatings: Record<number, { total: number; count: number; movies: number }> = {};
-    titleBasics.forEach((movie: any) => {
-      if (movie.startYear && movie.startYear !== "\\N") {
-        const year = parseInt(movie.startYear);
-        if (year >= 2018 && year <= 2025) {
-          const rating = titleRatings.find((r: any) => r.tconst === movie.tconst);
-          if (rating && rating.averageRating !== "\\N") {
-            if (!yearRatings[year]) yearRatings[year] = { total: 0, count: 0, movies: 0 };
-            yearRatings[year].total += parseFloat(rating.averageRating);
-            yearRatings[year].count += 1;
-            yearRatings[year].movies += 1;
-          }
-        }
-      }
-    });
-    const ratingsTrend = Object.entries(yearRatings)
-      .map(([year, data]) => ({
-        year: parseInt(year),
-        avgRating: data.total / data.count,
-        count: data.movies,
-      }))
-      .sort((a, b) => a.year - b.year);
+    // ===== 3. TOP RATED MOVIES =====
+    console.log("\n🏆 Fetching top rated movies...");
+    
+    const topRatedMovies = await query<{ title: string; rating: number; votes: number }>(`
+      SELECT 
+        dt.primary_title as title,
+        fr.avg_rating as rating,
+        fr.num_votes as votes
+      FROM DimTitle dt
+      INNER JOIN FactRatings fr ON dt.title_key = fr.title_key
+      WHERE dt.title_type = 'movie'
+        AND fr.num_votes >= 100
+      ORDER BY fr.avg_rating DESC, fr.num_votes DESC
+      LIMIT 5
+    `);
+    console.log("Top rated movies result:", topRatedMovies);
 
-    // 3. Top Rated Movies (minimum threshold for statistical significance)
-    const moviesWithRatings = titleBasics
-      .map((movie: any) => {
-        const rating = titleRatings.find((r: any) => r.tconst === movie.tconst);
+    // ===== 4. AWARDS BY CATEGORY =====
+    console.log("\n🏅 Fetching awards by category...");
+    
+    const awardsByCategory = await query<{ category: string; count: number }>(`
+      SELECT 
+        dac.category,
+        COUNT(*) as count
+      FROM FactOscarAwards foa
+      INNER JOIN DimAwardCategory dac ON foa.award_category_key = dac.award_category_key
+      WHERE dac.category IS NOT NULL
+      GROUP BY dac.category
+      ORDER BY count DESC
+      LIMIT 5
+    `);
+    console.log("Awards by category result:", awardsByCategory);
+
+    // ===== 5. POPULAR ACTORS =====
+    console.log("\n⭐ Fetching popular actors...");
+    
+    // FIX: Lower the threshold to movieCount >= 1 since you have limited data
+    const popularActors = await query<{ name: string; movieCount: number; avgRating: number }>(`
+      SELECT 
+        dp.full_name as name,
+        COUNT(DISTINCT bc.title_key) as movieCount,
+        AVG(fr.avg_rating) as avgRating
+      FROM BridgeCrew bc
+      INNER JOIN DimPerson dp ON bc.person_key = dp.person_key
+      LEFT JOIN FactRatings fr ON bc.title_key = fr.title_key
+      WHERE bc.category IN ('actor', 'actress')
+        AND fr.avg_rating IS NOT NULL
+      GROUP BY dp.person_key, dp.full_name
+      HAVING movieCount >= 1
+      ORDER BY movieCount DESC, avgRating DESC
+      LIMIT 5
+    `);
+    console.log("Popular actors result:", popularActors);
+
+    // ===== 6. SUCCESSFUL CREW MEMBERS =====
+    console.log("\n🎬 Fetching successful crew members...");
+    
+    const successfulCrewMembers = await query<any>(`
+      SELECT 
+        dp.full_name as name,
+        COUNT(DISTINCT bc.title_key) as totalMovies,
+        COUNT(DISTINCT CASE 
+          WHEN fr.avg_rating >= 7.0 AND fr.num_votes > 1000 
+          THEN bc.title_key 
+          ELSE NULL 
+        END) as highRatedMovies,
+        AVG(fr.avg_rating) as avgRating
+      FROM BridgeCrew bc
+      INNER JOIN DimPerson dp ON bc.person_key = dp.person_key
+      LEFT JOIN FactRatings fr ON bc.title_key = fr.title_key
+      WHERE bc.category IN ('director', 'writer')
+        AND fr.avg_rating IS NOT NULL
+      GROUP BY dp.person_key, dp.full_name
+      HAVING totalMovies >= 1
+      ORDER BY (highRatedMovies / totalMovies) DESC, avgRating DESC
+      LIMIT 5
+    `).then(results => 
+      results.map(crew => {
+        const total = parseInt(crew.totalMovies);
+        const highRated = parseInt(crew.highRatedMovies);
+        // Cap at 100% to avoid calculation errors
+        const successRate = Math.min((highRated / total) * 100, 100);
+        
         return {
-          title: movie.primaryTitle,
-          rating: rating && rating.averageRating !== "\\N" ? parseFloat(rating.averageRating) : 0,
-          votes: rating && rating.numVotes !== "\\N" ? parseInt(rating.numVotes) : 0,
+          name: crew.name,
+          totalMovies: total,
+          successRate: successRate,
+          avgRating: parseFloat(crew.avgRating),
+          highRatedMovies: highRated // Add this for debugging
         };
       })
-      .filter((m: any) => m.votes >= 100 && m.rating > 0) // Statistical significance threshold
-      .sort((a: any, b: any) => b.rating - a.rating)
-      .slice(0, 5);
+    );
+    console.log("Successful crew members result:", successfulCrewMembers);
 
-    // 4. Awards by Category
-    const awardCategoryCounts: Record<string, number> = {};
-    oscarData.forEach((award: any) => {
-      const category = award.category || "Unknown";
-      awardCategoryCounts[category] = (awardCategoryCounts[category] || 0) + 1;
-    });
-    const awardsByCategory = Object.entries(awardCategoryCounts)
-      .map(([category, count]) => ({ category, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
-
-    // 5. Popular Actors (by movie count and average rating)
-    const actorCounts: Record<string, { count: number; name: string; totalRating: number; ratingCount: number }> = {};
-    titlePrincipals.forEach((principal: any) => {
-      if (principal.category && (principal.category === "actor" || principal.category === "actress")) {
-        const person = nameBasics.find((n: any) => n.nconst === principal.nconst);
-        if (person) {
-          if (!actorCounts[principal.nconst]) {
-            actorCounts[principal.nconst] = { count: 0, name: person.primaryName, totalRating: 0, ratingCount: 0 };
-          }
-          actorCounts[principal.nconst].count += 1;
-          
-          const rating = titleRatings.find((r: any) => r.tconst === principal.tconst);
-          if (rating && rating.averageRating !== "\\N") {
-            actorCounts[principal.nconst].totalRating += parseFloat(rating.averageRating);
-            actorCounts[principal.nconst].ratingCount += 1;
-          }
-        }
-      }
-    });
-    const popularActors = Object.values(actorCounts)
-      .filter((actor) => actor.count >= 2) // Minimum movies for inclusion
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5)
-      .map((actor) => ({
-        name: actor.name,
-        movieCount: actor.count,
-        avgRating: actor.ratingCount > 0 ? actor.totalRating / actor.ratingCount : 0,
-      }));
-
-    // 6. Successful Crew Members (Directors/Writers)
-    // Success = High rating (>=7.0) AND sufficient votes (>1000)
-    const crewPerformance: Record<string, { 
-      name: string; 
-      totalMovies: number; 
-      highRatedMovies: number; 
-      totalRating: number;
-      ratingCount: number;
-    }> = {};
-
-    titlePrincipals.forEach((principal: any) => {
-      if (principal.category && (principal.category === "director" || principal.category === "writer")) {
-        const person = nameBasics.find((n: any) => n.nconst === principal.nconst);
-        if (person) {
-          const personKey = principal.nconst;
-          
-          if (!crewPerformance[personKey]) {
-            crewPerformance[personKey] = {
-              name: person.primaryName,
-              totalMovies: 0,
-              highRatedMovies: 0,
-              totalRating: 0,
-              ratingCount: 0,
-            };
-          }
-          
-          crewPerformance[personKey].totalMovies += 1;
-          
-          const rating = titleRatings.find((r: any) => r.tconst === principal.tconst);
-          if (rating && rating.averageRating !== "\\N" && rating.numVotes !== "\\N") {
-            const avgRating = parseFloat(rating.averageRating);
-            const numVotes = parseInt(rating.numVotes);
-            
-            crewPerformance[personKey].totalRating += avgRating;
-            crewPerformance[personKey].ratingCount += 1;
-            
-            // Success criteria: rating >= 7.0 AND votes > 1000
-            if (avgRating >= 7.0 && numVotes > 1000) {
-              crewPerformance[personKey].highRatedMovies += 1;
-            }
-          }
-        }
-      }
-    });
-
-    const successfulCrewMembers = Object.values(crewPerformance)
-      .filter((crew) => crew.totalMovies >= 2) // Minimum 2 movies for statistical relevance
-      .map((crew) => ({
-        name: crew.name,
-        totalMovies: crew.totalMovies,
-        successRate: (crew.highRatedMovies / crew.totalMovies) * 100,
-        avgRating: crew.ratingCount > 0 ? crew.totalRating / crew.ratingCount : 0,
-      }))
-      .sort((a, b) => b.successRate - a.successRate || b.avgRating - a.avgRating)
-      .slice(0, 5);
-
-    // 7. Best Film Genre (Past Decade)
-    const genreSuccessCounts: Record<string, { totalRating: number; count: number; highRated: number }> = {};
+    // ===== 7. BEST FILM GENRE (PAST DECADE) =====
+    console.log("\n🎭 Fetching best film genre...");
+    
     const currentYear = new Date().getFullYear();
-    
-    titleBasics.forEach((movie: any) => {
-      if (movie.startYear && movie.startYear !== "\\N") {
-        const year = parseInt(movie.startYear);
-        if (year >= currentYear - 10) {
-          const rating = titleRatings.find((r: any) => r.tconst === movie.tconst);
-          if (rating && rating.averageRating !== "\\N" && movie.genres !== "\\N") {
-            const avgRating = parseFloat(rating.averageRating);
-            movie.genres.split(",").forEach((genre: string) => {
-              const trimmedGenre = genre.trim();
-              if (!genreSuccessCounts[trimmedGenre]) {
-                genreSuccessCounts[trimmedGenre] = { totalRating: 0, count: 0, highRated: 0 };
-              }
-              genreSuccessCounts[trimmedGenre].totalRating += avgRating;
-              genreSuccessCounts[trimmedGenre].count += 1;
-              if (avgRating >= 7.0) {
-                genreSuccessCounts[trimmedGenre].highRated += 1;
-              }
-            });
-          }
-        }
-      }
-    });
-    
-    const bestFilmGenre = Object.entries(genreSuccessCounts)
-      .filter(([_, data]) => data.count >= 1)
-      .map(([genre, data]) => ({ 
-        genre, 
-        avgRating: data.totalRating / data.count, 
-        count: data.count,
-        successRate: (data.highRated / data.count) * 100,
+    const bestFilmGenre = await query<any>(`
+      SELECT 
+        dt.genre as genre,
+        AVG(fr.avg_rating) as avgRating,
+        COUNT(DISTINCT dt.title_key) as count,
+        SUM(CASE WHEN fr.avg_rating >= 7.0 THEN 1 ELSE 0 END) as highRated
+      FROM DimTitle dt
+      INNER JOIN FactRatings fr ON dt.title_key = fr.title_key
+      WHERE dt.title_type = 'movie'
+        AND dt.release_year >= ${currentYear - 10}
+        AND dt.genre IS NOT NULL
+        AND fr.avg_rating IS NOT NULL
+      GROUP BY dt.genre
+      HAVING count >= 1
+      ORDER BY avgRating DESC
+      LIMIT 5
+    `).then(results =>
+      results.map(g => ({
+        genre: g.genre,
+        avgRating: parseFloat(g.avgRating),
+        count: parseInt(g.count),
+        successRate: (parseInt(g.highRated) / parseInt(g.count)) * 100
       }))
-      .sort((a, b) => b.avgRating - a.avgRating)
-      .slice(0, 5);
+    );
+    console.log("Best film genre result:", bestFilmGenre);
 
-    // 8. Ratio of Actor Professions
-    const professionCounts: Record<string, number> = {};
-    nameBasics.forEach((person: any) => {
-      if (person.primaryProfession && person.primaryProfession !== "\\N") {
-        person.primaryProfession.split(",").forEach((profession: string) => {
-          const trimmedProfession = profession.trim();
-          professionCounts[trimmedProfession] = (professionCounts[trimmedProfession] || 0) + 1;
-        });
-      }
+    // ===== 8. RATIO OF ACTOR PROFESSIONS =====
+    console.log("\n👥 Fetching ratio of actor professions...");
+    
+    const ratioActorProfession = await query<any>(`
+      SELECT 
+        bc.category as profession,
+        COUNT(*) as count
+      FROM BridgeCrew bc
+      WHERE bc.category IS NOT NULL
+      GROUP BY bc.category
+      ORDER BY count DESC
+      LIMIT 10
+    `).then(results => {
+      const total = results.reduce((sum, r) => sum + parseInt(r.count), 0);
+      return results.map(p => ({
+        profession: p.profession,
+        count: parseInt(p.count),
+        percentage: (parseInt(p.count) / total) * 100
+      }));
     });
-    const totalProfessionCount = Object.values(professionCounts).reduce((sum, count) => sum + count, 0);
-    const ratioActorProfession = Object.entries(professionCounts)
-      .map(([profession, count]) => ({ 
-        profession, 
-        count, 
-        percentage: (count / totalProfessionCount) * 100 
-      }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
+    console.log("Ratio of actor professions result:", ratioActorProfession);
 
-    // 9. Popularity of Actors per Genre (unique actor count per genre)
-    const genreActorCounts: Record<string, { actorSet: Set<string>; totalRating: number; count: number }> = {};
+    // ===== 9. POPULARITY OF ACTORS PER GENRE =====
+    console.log("\n🌟 Fetching popularity of actors per genre...");
     
-    titlePrincipals.forEach((principal: any) => {
-      if (principal.category && (principal.category === "actor" || principal.category === "actress")) {
-        const movie = titleBasics.find((m: any) => m.tconst === principal.tconst);
-        if (movie && movie.genres && movie.genres !== "\\N") {
-          const rating = titleRatings.find((r: any) => r.tconst === principal.tconst);
-          const avgRating = rating && rating.averageRating !== "\\N" ? parseFloat(rating.averageRating) : 0;
-          
-          movie.genres.split(",").forEach((genre: string) => {
-            const trimmedGenre = genre.trim();
-            if (!genreActorCounts[trimmedGenre]) {
-              genreActorCounts[trimmedGenre] = { actorSet: new Set(), totalRating: 0, count: 0 };
-            }
-            genreActorCounts[trimmedGenre].actorSet.add(principal.nconst);
-            if (avgRating > 0) {
-              genreActorCounts[trimmedGenre].totalRating += avgRating;
-              genreActorCounts[trimmedGenre].count += 1;
-            }
-          });
-        }
-      }
-    });
-    
-    const popularityActorGenre = Object.entries(genreActorCounts)
-      .map(([genre, data]) => ({
-        genre,
-        actorCount: data.actorSet.size,
-        avgRating: data.count > 0 ? data.totalRating / data.count : 0,
-      }))
-      .sort((a, b) => b.actorCount - a.actorCount)
-      .slice(0, 8);
+    const popularityActorGenre = await query<{ genre: string; actorCount: number; avgRating: number }>(`
+      SELECT 
+        dt.genre as genre,
+        COUNT(DISTINCT bc.person_key) as actorCount,
+        AVG(fr.avg_rating) as avgRating
+      FROM BridgeCrew bc
+      INNER JOIN DimTitle dt ON bc.title_key = dt.title_key
+      LEFT JOIN FactRatings fr ON bc.title_key = fr.title_key
+      WHERE bc.category IN ('actor', 'actress')
+        AND dt.genre IS NOT NULL
+        AND fr.avg_rating IS NOT NULL
+      GROUP BY dt.genre
+      ORDER BY actorCount DESC
+      LIMIT 8
+    `);
+    console.log("Popularity of actors per genre result:", popularityActorGenre);
 
     // ===== STATISTICAL TESTS =====
 
-    // 1. CORRELATION TEST: Pearson Correlation between Ratings and Votes
-    // Formula: r = Σ[(xi - x̄)(yi - ȳ)] / √[Σ(xi - x̄)² * Σ(yi - ȳ)²]
-    const ratingsVotesData = titleBasics
-      .map((movie: any) => {
-        const rating = titleRatings.find((r: any) => r.tconst === movie.tconst);
-        if (rating && rating.averageRating !== "\\N" && rating.numVotes !== "\\N") {
-          return {
-            title: movie.primaryTitle,
-            rating: parseFloat(rating.averageRating),
-            votes: parseInt(rating.numVotes),
-          };
-        }
-        return null;
-      })
-      .filter((m: any) => m !== null && m.votes > 100);
+    // 1. CORRELATION: Ratings vs Votes (Pearson)
+    const correlationData = await query<{ rating: number; votes: number; title: string }>(`
+      SELECT 
+        dt.primary_title as title,
+        fr.avg_rating as rating,
+        fr.num_votes as votes
+      FROM DimTitle dt
+      INNER JOIN FactRatings fr ON dt.title_key = fr.title_key
+      WHERE dt.title_type = 'movie'
+        AND fr.num_votes > 100
+      LIMIT 1000
+    `);
 
-    const correlationRatingsVotes = ratingsVotesData.slice(0, 20);
-    
-    // Calculate Pearson correlation coefficient
+    const correlationRatingsVotes = correlationData.slice(0, 20);
+
+    // Calculate Pearson correlation
     let pearsonR = 0;
-    if (ratingsVotesData.length > 1) {
-      const meanRating = ratingsVotesData.reduce((sum: number, d: any) => sum + d.rating, 0) / ratingsVotesData.length;
-      const meanVotes = ratingsVotesData.reduce((sum: number, d: any) => sum + d.votes, 0) / ratingsVotesData.length;
+    if (correlationData.length > 1) {
+      const meanRating = correlationData.reduce((sum, d) => sum + d.rating, 0) / correlationData.length;
+      const meanVotes = correlationData.reduce((sum, d) => sum + d.votes, 0) / correlationData.length;
       
-      const numerator = ratingsVotesData.reduce((sum: number, d: any) => 
+      const numerator = correlationData.reduce((sum, d) => 
         sum + (d.rating - meanRating) * (d.votes - meanVotes), 0);
       
-      const denomX = Math.sqrt(ratingsVotesData.reduce((sum: number, d: any) => 
+      const denomX = Math.sqrt(correlationData.reduce((sum, d) => 
         sum + Math.pow(d.rating - meanRating, 2), 0));
       
-      const denomY = Math.sqrt(ratingsVotesData.reduce((sum: number, d: any) => 
+      const denomY = Math.sqrt(correlationData.reduce((sum, d) => 
         sum + Math.pow(d.votes - meanVotes, 2), 0));
       
       pearsonR = denomX && denomY ? numerator / (denomX * denomY) : 0;
     }
 
-    // 2. CHI-SQUARE TEST: Genre vs Award Success
-    // H0: Genre and award success are independent
-    // χ² = Σ[(Observed - Expected)² / Expected]
-    const genreAwardCounts: Record<string, { awardWinners: number; nonWinners: number }> = {};
-    
-    oscarData.forEach((award: any) => {
-      if (award.film) {
-        const movie = titleBasics.find((m: any) => 
-          m.primaryTitle.toLowerCase().trim() === award.film.toLowerCase().trim()
-        );
-        if (movie && movie.genres && movie.genres !== "\\N") {
-          movie.genres.split(",").forEach((genre: string) => {
-            const trimmedGenre = genre.trim();
-            if (!genreAwardCounts[trimmedGenre]) {
-              genreAwardCounts[trimmedGenre] = { awardWinners: 0, nonWinners: 0 };
-            }
-            // Check if winner (normalize different formats)
-            const isWinner = award.winner === "True" || award.winner === "TRUE" || 
-                           award.winner === "true" || award.winner === true;
-            if (isWinner) {
-              genreAwardCounts[trimmedGenre].awardWinners += 1;
-            } else {
-              genreAwardCounts[trimmedGenre].nonWinners += 1;
-            }
-          });
-        }
-      }
-    });
-    
-    const chiSquareTest = Object.entries(genreAwardCounts)
-      .filter(([_, counts]) => (counts.awardWinners + counts.nonWinners) >= 5) // Minimum sample size
-      .map(([genre, counts]) => {
-        const total = counts.awardWinners + counts.nonWinners;
-        const totalWinners = Object.values(genreAwardCounts).reduce((sum, c) => sum + c.awardWinners, 0);
-        const totalNominees = Object.values(genreAwardCounts).reduce((sum, c) => sum + c.awardWinners + c.nonWinners, 0);
-        const expectedWinRate = totalWinners / totalNominees;
+    // 2. CHI-SQUARE TEST: Genre vs Award Winners
+    const chiSquareTest = await query<any>(`
+      SELECT 
+        dt.genre,
+        SUM(CASE WHEN foa.is_winner = 1 THEN 1 ELSE 0 END) as awardWinners,
+        SUM(CASE WHEN foa.is_winner = 0 THEN 1 ELSE 0 END) as nonWinners,
+        COUNT(*) as total
+      FROM FactOscarAwards foa
+      INNER JOIN DimTitle dt ON foa.title_key = dt.title_key
+      WHERE dt.genre IS NOT NULL
+      GROUP BY dt.genre
+      HAVING total >= 1
+      ORDER BY total DESC
+      LIMIT 5
+    `).then(results => {
+      const totalWinners = results.reduce((sum, r) => sum + parseInt(r.awardWinners), 0);
+      const totalNominees = results.reduce((sum, r) => sum + parseInt(r.total), 0);
+      const expectedWinRate = totalWinners / totalNominees;
+
+      return results.map(r => {
+        const total = parseInt(r.total);
+        const winners = parseInt(r.awardWinners);
+        const nonWinners = parseInt(r.nonWinners);
         const expectedWinners = total * expectedWinRate;
         const expectedNonWinners = total * (1 - expectedWinRate);
         
-        // χ² calculation
-        const chiSquare = 
-          Math.pow(counts.awardWinners - expectedWinners, 2) / expectedWinners +
-          Math.pow(counts.nonWinners - expectedNonWinners, 2) / expectedNonWinners;
-        
-        return {
-          genre,
-          awardWinners: counts.awardWinners,
-          nonWinners: counts.nonWinners,
-          chiSquare,
-          pValue: chiSquare > 3.841 ? 0.05 : 0.10, // Critical value for df=1 at α=0.05
-        };
-      })
-      .sort((a, b) => b.chiSquare - a.chiSquare)
-      .slice(0, 5);
+        const chiSquare = expectedWinners > 0 && expectedNonWinners > 0
+          ? Math.pow(winners - expectedWinners, 2) / expectedWinners +
+            Math.pow(nonWinners - expectedNonWinners, 2) / expectedNonWinners
+          : 0;
 
-    // 3. HYPOTHESIS TESTING: T-Test for Genre Ratings vs Population Mean
-    // H0: Genre mean rating = Population mean rating
-    // H1: Genre mean rating ≠ Population mean rating
-    // t = (x̄ - μ) / (s / √n)
-    const hypothesisTesting = Object.entries(genreSuccessCounts)
-      .filter(([_, data]) => data.count >= 5) // Minimum sample size for t-test
-      .map(([genre, data]) => {
-        const genreAvg = data.totalRating / data.count;
-        const n = data.count;
-        
-        // Calculate sample standard deviation
-        const genreMovies = titleBasics.filter((movie: any) => 
-          movie.genres && movie.genres.includes(genre) && movie.startYear >= currentYear - 10
-        );
-        
-        let variance = 0;
-        genreMovies.forEach((movie: any) => {
-          const rating = titleRatings.find((r: any) => r.tconst === movie.tconst);
-          if (rating && rating.averageRating !== "\\N") {
-            variance += Math.pow(parseFloat(rating.averageRating) - genreAvg, 2);
-          }
-        });
-        const stdDev = Math.sqrt(variance / (n - 1));
-        const standardError = stdDev / Math.sqrt(n);
-        
-        const tStat = standardError > 0 ? (genreAvg - avgRating) / standardError : 0;
-        const degreesOfFreedom = n - 1;
-        
-        // Approximate p-value using t-distribution (two-tailed)
-        const pValue = Math.abs(tStat) > 2.0 ? (Math.abs(tStat) > 3.0 ? 0.001 : 0.01) : 0.05;
-        
         return {
-          genre,
+          genre: r.genre,
+          awardWinners: winners,
+          nonWinners: nonWinners,
+          chiSquare,
+          pValue: chiSquare > 3.841 ? 0.05 : 0.10
+        };
+      });
+    });
+
+    // 3. HYPOTHESIS TESTING (T-Test): Genre ratings vs population mean
+    const hypothesisTesting = await query<any>(`
+      SELECT 
+        dt.genre,
+        AVG(fr.avg_rating) as avgRating,
+        COUNT(*) as sampleSize,
+        STDDEV(fr.avg_rating) as stdDev
+      FROM DimTitle dt
+      INNER JOIN FactRatings fr ON dt.title_key = fr.title_key
+      WHERE dt.release_year >= ${currentYear - 10}
+        AND dt.genre IS NOT NULL
+        AND fr.avg_rating IS NOT NULL
+      GROUP BY dt.genre
+      HAVING sampleSize >= 1
+      ORDER BY avgRating DESC
+      LIMIT 5
+    `).then(results =>
+      results.map(r => {
+        const genreAvg = parseFloat(r.avgRating);
+        const n = parseInt(r.sampleSize);
+        const stdDev = parseFloat(r.stdDev) || 1;
+        const standardError = stdDev / Math.sqrt(n);
+        const tStat = standardError > 0 ? (genreAvg - avgRating) / standardError : 0;
+        const pValue = Math.abs(tStat) > 2.0 ? (Math.abs(tStat) > 3.0 ? 0.001 : 0.01) : 0.05;
+
+        return {
+          genre: r.genre,
           avgRating: genreAvg,
           sampleSize: n,
           tStat,
           pValue,
           stdDev,
-          significant: Math.abs(tStat) > 2.0, // α = 0.05, approximate critical value
+          significant: Math.abs(tStat) > 2.0
         };
       })
-      .sort((a, b) => Math.abs(b.tStat) - Math.abs(a.tStat))
-      .slice(0, 5);
+    );
 
-    // 4. ARIMA / TIME SERIES FORECASTING
-    // Simple moving average and linear trend for prediction
-    const arima = ratingsTrend.map((r, idx) => {
-      // Simple linear regression prediction
-      const predicted = idx < ratingsTrend.length - 1 
-        ? ratingsTrend[idx + 1]?.count // Use next actual value for comparison
-        : Math.round(r.count * 1.05); // Predict 5% growth for last year
-      
-      return {
-        year: r.year,
-        actual: r.count,
-        predicted: predicted || r.count,
-      };
-    });
+    // 4. ARIMA (Time Series)
+    const arima = ratingsTrend.map((r, idx) => ({
+      year: r.year,
+      actual: r.count,
+      predicted: idx < ratingsTrend.length - 1 
+        ? ratingsTrend[idx + 1]?.count 
+        : Math.round(r.count * 1.05)
+    }));
 
-    // 5. INDEPENDENCE TEST: Chi-Square for Gender vs Award Category
-    // This would require gender data - using mock structure for demonstration
+    // 5. INDEPENDENCE TEST (Mock data - would need gender field in schema)
     const independenceTest = [
-      { category: "Best Director", male: 85, female: 10, pValue: 0.0001, chiSquare: 59.2 },
-      { category: "Best Actor", male: 95, female: 0, pValue: 0.0000, chiSquare: 95.0 },
-      { category: "Best Actress", male: 0, female: 95, pValue: 0.0000, chiSquare: 95.0 },
-      { category: "Best Supporting Actor", male: 78, female: 7, pValue: 0.0002, chiSquare: 47.8 },
+      { category: "Best Director", male: 85, female: 10, pValue: 0.0001 },
+      { category: "Best Actor", male: 95, female: 0, pValue: 0.0000 },
+      { category: "Best Actress", male: 0, female: 95, pValue: 0.0000 },
+      { category: "Best Supporting Actor", male: 78, female: 7, pValue: 0.0002 },
     ];
 
     // ===== ACTOR ANALYTICS =====
 
     // Actor Success by Year
-    const actorSuccessByYear: any[] = [];
-    const topActorIds = Object.keys(actorCounts)
-      .sort((a, b) => actorCounts[b].count - actorCounts[a].count)
-      .slice(0, 3);
-    
-    topActorIds.forEach((actorId) => {
-      const actor = actorCounts[actorId];
-      const actorMoviesByYear: Record<number, { ratings: number[]; count: number }> = {};
-      
-      titlePrincipals
-        .filter((p: any) => p.nconst === actorId)
-        .forEach((principal: any) => {
-          const movie = titleBasics.find((m: any) => m.tconst === principal.tconst);
-          if (movie && movie.startYear && movie.startYear !== "\\N") {
-            const year = parseInt(movie.startYear);
-            if (year >= 2018 && year <= 2025) {
-              if (!actorMoviesByYear[year]) {
-                actorMoviesByYear[year] = { ratings: [], count: 0 };
-              }
-              actorMoviesByYear[year].count += 1;
-              
-              const rating = titleRatings.find((r: any) => r.tconst === principal.tconst);
-              if (rating && rating.averageRating !== "\\N") {
-                actorMoviesByYear[year].ratings.push(parseFloat(rating.averageRating));
-              }
-            }
-          }
-        });
-      
-      Object.entries(actorMoviesByYear).forEach(([year, data]) => {
-        actorSuccessByYear.push({
-          actor: actor.name,
-          year: parseInt(year),
-          avgRating: data.ratings.length > 0 
-            ? data.ratings.reduce((a, b) => a + b, 0) / data.ratings.length 
-            : 0,
-          movieCount: data.count,
-        });
-      });
-    });
+    const actorSuccessByYear = await query<any>(`
+      SELECT 
+        top_actors.full_name as actor,
+        dt.release_year as year,
+        AVG(fr.avg_rating) as avgRating,
+        COUNT(DISTINCT bc.title_key) as movieCount
+      FROM (
+        SELECT dp.person_key, dp.full_name
+        FROM BridgeCrew bc2
+        INNER JOIN DimPerson dp ON bc2.person_key = dp.person_key
+        WHERE bc2.category IN ('actor', 'actress')
+        GROUP BY dp.person_key, dp.full_name
+        ORDER BY COUNT(*) DESC
+        LIMIT 3
+      ) top_actors
+      INNER JOIN BridgeCrew bc ON top_actors.person_key = bc.person_key
+      INNER JOIN DimTitle dt ON bc.title_key = dt.title_key
+      LEFT JOIN FactRatings fr ON dt.title_key = fr.title_key
+      WHERE bc.category IN ('actor', 'actress')
+        AND dt.release_year BETWEEN 2018 AND 2025
+        AND fr.avg_rating IS NOT NULL
+      GROUP BY top_actors.person_key, top_actors.full_name, dt.release_year
+      ORDER BY top_actors.full_name, dt.release_year
+    `);
 
-    // Crew Profession Ratio (top 5)
+    // Crew Profession Ratio
     const crewProfessionRatio = ratioActorProfession.slice(0, 5);
 
     // Actor Genre Popularity
-    const actorGenrePopularity: any[] = [];
-    topActorIds.forEach((actorId) => {
-      const actor = actorCounts[actorId];
-      const actorGenres: Record<string, { count: number; ratings: number[] }> = {};
-      
-      titlePrincipals
-        .filter((p: any) => p.nconst === actorId)
-        .forEach((principal: any) => {
-          const movie = titleBasics.find((m: any) => m.tconst === principal.tconst);
-          if (movie && movie.genres && movie.genres !== "\\N") {
-            const rating = titleRatings.find((r: any) => r.tconst === principal.tconst);
-            const avgRating = rating && rating.averageRating !== "\\N" ? parseFloat(rating.averageRating) : 0;
-            
-            movie.genres.split(",").forEach((genre: string) => {
-              const trimmedGenre = genre.trim();
-              if (!actorGenres[trimmedGenre]) {
-                actorGenres[trimmedGenre] = { count: 0, ratings: [] };
-              }
-              actorGenres[trimmedGenre].count += 1;
-              if (avgRating > 0) {
-                actorGenres[trimmedGenre].ratings.push(avgRating);
-              }
-            });
-          }
-        });
-      
-      Object.entries(actorGenres)
-        .sort(([, a], [, b]) => b.count - a.count)
-        .slice(0, 3)
-        .forEach(([genre, data]) => {
-          actorGenrePopularity.push({
-            actor: actor.name,
-            genre,
-            movieCount: data.count,
-            avgRating: data.ratings.length > 0 
-              ? data.ratings.reduce((a, b) => a + b, 0) / data.ratings.length 
-              : 0,
-          });
-        });
-    });
+    const actorGenrePopularity = await query<any>(`
+      SELECT 
+        top_actors.full_name as actor,
+        dt.genre,
+        COUNT(DISTINCT bc.title_key) as movieCount,
+        AVG(fr.avg_rating) as avgRating
+      FROM (
+        SELECT dp.person_key, dp.full_name
+        FROM BridgeCrew bc2
+        INNER JOIN DimPerson dp ON bc2.person_key = dp.person_key
+        WHERE bc2.category IN ('actor', 'actress')
+        GROUP BY dp.person_key, dp.full_name
+        ORDER BY COUNT(*) DESC
+        LIMIT 3
+      ) top_actors
+      INNER JOIN BridgeCrew bc ON top_actors.person_key = bc.person_key
+      INNER JOIN DimTitle dt ON bc.title_key = dt.title_key
+      LEFT JOIN FactRatings fr ON bc.title_key = fr.title_key
+      WHERE bc.category IN ('actor', 'actress')
+        AND dt.genre IS NOT NULL
+        AND fr.avg_rating IS NOT NULL
+      GROUP BY top_actors.person_key, top_actors.full_name, dt.genre
+      ORDER BY top_actors.full_name, movieCount DESC
+      LIMIT 20
+    `);
 
-    console.log("Successfully processed all data");
-    console.log("Pearson Correlation (Ratings vs Votes):", pearsonR.toFixed(4));
-
-    return NextResponse.json({
+    const result = {
       totalMovies,
       totalPersons,
       totalAwards,
       avgRating,
       genreDistribution,
       ratingsTrend,
-      topRatedMovies: moviesWithRatings,
+      topRatedMovies,
       awardsByCategory,
       popularActors,
       successfulCrewMembers,
@@ -579,14 +453,31 @@ export async function GET() {
       actorSuccessByYear,
       crewProfessionRatio,
       actorGenrePopularity,
-      pearsonCorrelation: pearsonR, // Add correlation coefficient to response
+      pearsonCorrelation: pearsonR,
+    };
+
+    console.log("\n✅ API Response summary:", {
+      titleCount: titleCount?.count,
+      personCount: personCount?.count,
+      ratingCount: ratingCount?.count,
+      genreCount: genreDistribution.length,
+      trendCount: ratingsTrend.length,
+      topMoviesCount: topRatedMovies.length,
+      awardsCount: awardsByCategory.length,
+      actorsCount: popularActors.length,
+      crewCount: successfulCrewMembers.length,
+      bestGenreCount: bestFilmGenre.length,
     });
+
+    return NextResponse.json(result);
   } catch (error: any) {
-    console.error("Error in API route:", error);
+    console.error("❌ Error in API route:", error);
     return NextResponse.json({ 
-      error: "Failed to fetch dashboard stats",
+      error: "Failed to fetch data from MySQL",
       details: error.message,
-      stack: error.stack
+      stack: error.stack,
+      sqlState: error.sqlState,
+      errno: error.errno,
     }, { status: 500 });
   }
 }
