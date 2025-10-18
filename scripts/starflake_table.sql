@@ -89,7 +89,7 @@ CREATE TABLE FactRatings (
 	avg_rating FLOAT,
 	num_votes INT,
 	FOREIGN KEY (title_key) REFERENCES DimTitle(title_key),
-	FOREIGN KEY (episode_key) REFERENCES DimEpisode(episode_key),
+	FOREIGN KEY (episode_key) REFERENCES DimEpisode(episode_key)
 )ENGINE=InnoDB;
 
 CREATE TABLE BridgeCrew (
@@ -105,11 +105,9 @@ FOREIGN KEY (person_key) REFERENCES DimPerson(person_key)
 CREATE INDEX idx_factratings_title ON FactRatings(title_key);
 CREATE INDEX idx_factratings_genre ON FactRatings(genre_key);
 CREATE INDEX idx_factoscar_person ON FactOscarAwards(person_key);
-CREATE INDEX idx_bridgetitlegenre_title ON BridgeTitleGenre(title_key);
 CREATE INDEX idx_ftcgp_genre_year ON FactCrewPerformancePerFilmGenre (genre_key, release_year);
 
 
 
--- DimTime is not recommended for my implementation. Year is enough.
 
 
