@@ -132,3 +132,53 @@ WITH RECURSIVE split_nominees AS (
 SELECT title_key, person_key, is_winner, class, canonical_category, category, ceremony_year 
 FROM split_nominees
 WHERE person_key <> '' AND person_key <> '?';
+
+-- funny bridge crew P1 (from title.crews)
+
+INSERT INTO imdb.BridgeCrew(title_key,person_key,category)
+WITH RECURSIVE split_directors  AS (
+	SELECT 
+	tconst,
+	'director' AS category,
+	
+	TRIM(SUBSTRING_INDEX(directors,',',1)) AS nconst,
+	SUBSTRING(directors, LENGTH(TRIM(SUBSTRING_INDEX(directors,',',1))) + 1) AS extra
+	FROM title_crew
+	
+	UNION ALL
+	
+	SELECT
+	tconst,
+	'director' AS category,
+	TRIM(SUBSTRING_INDEX(extra,',',1)) AS nconst,
+	SUBSTRING(extra,LENGTH(TRIM(SUBSTRING_INDEX(extra,',',1)))+1) AS extra
+	FROM split_directors
+	WHERE extra <> ''
+), 
+split_writers AS (
+	SELECT 
+	tconst,
+	'writer' AS category,
+	TRIM(SUBSTRING_INDEX(writers,',',1)) AS nconst,
+	SUBSTRING(writers, LENGTH(TRIM(SUBSTRING_INDEX(writers,',',1))) + 1) AS extra
+	FROM title_crew
+	
+	UNION ALL
+	
+	SELECT
+	tconst,
+	'writer' AS category,
+	TRIM(SUBSTRING_INDEX(extra,',',1)) AS nconst,
+	SUBSTRING(extra,LENGTH(TRIM(SUBSTRING_INDEX(extra,',',1)))+1) AS extra
+	FROM split_writers
+	WHERE extra <> ''
+)
+SELECT tconst, nconst, category
+FROM (
+SELECT tconst, nconst, category 
+FROM split_directors
+UNION ALL
+SELECT tconst, nconst, category 
+FROM split_writers
+) AS combined
+WHERE category IS NOT NULL AND category <> '';

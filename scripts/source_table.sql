@@ -57,3 +57,24 @@ CREATE TABLE name_basics (
     primaryProfession TEXT,       -- Array of strings
     knownForTitles TEXT          -- Array of tconsts
 );
+
+CREATE TABLE oscar_awards (
+    id INT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+    ceremony TEXT,
+    year TEXT,
+    class TEXT,
+    canonicalCategory TEXT,
+    category TEXT,
+    nomId TEXT,
+    film TEXT,
+    filmId TEXT,
+    name TEXT,
+    nominees TEXT,
+    nomineeIds TEXT,
+    winner TEXT,
+    detail TEXT,
+    note TEXT,
+    citation TEXT,
+    multifilmNomination TEXT
+
+);
