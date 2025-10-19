@@ -145,7 +145,7 @@ WITH RECURSIVE split_directors AS (
 	'director' AS category,
 	
 	TRIM(SUBSTRING_INDEX(directors,',',1)) AS nconst,
-	SUBSTRING(directors, LENGTH(TRIM(SUBSTRING_INDEX(directors,',',1))) + 1) AS extra
+	SUBSTRING(directors, LENGTH(TRIM(SUBSTRING_INDEX(directors,',',1))) + 2) AS extra
 	FROM title_crew
 	
 	UNION ALL
@@ -154,7 +154,7 @@ WITH RECURSIVE split_directors AS (
 	tconst,
 	'director' AS category,
 	TRIM(SUBSTRING_INDEX(extra,',',1)) AS nconst,
-	SUBSTRING(extra,LENGTH(TRIM(SUBSTRING_INDEX(extra,',',1)))+1) AS extra
+	SUBSTRING(extra,LENGTH(TRIM(SUBSTRING_INDEX(extra,',',1))) + 2) AS extra
 	FROM split_directors
 	WHERE extra <> ''
 ), 
@@ -163,7 +163,7 @@ split_writers AS (
 	tconst,
 	'writer' AS category,
 	TRIM(SUBSTRING_INDEX(writers,',',1)) AS nconst,
-	SUBSTRING(writers, LENGTH(TRIM(SUBSTRING_INDEX(writers,',',1))) + 1) AS extra
+	SUBSTRING(writers, LENGTH(TRIM(SUBSTRING_INDEX(writers,',',1))) + 2) AS extra
 	FROM title_crew
 	
 	UNION ALL
@@ -172,7 +172,7 @@ split_writers AS (
 	tconst,
 	'writer' AS category,
 	TRIM(SUBSTRING_INDEX(extra,',',1)) AS nconst,
-	SUBSTRING(extra,LENGTH(TRIM(SUBSTRING_INDEX(extra,',',1)))+1) AS extra
+	SUBSTRING(extra,LENGTH(TRIM(SUBSTRING_INDEX(extra,',',1))) + 2) AS extra
 	FROM split_writers
 	WHERE extra <> ''
 )
@@ -184,7 +184,7 @@ UNION ALL
 SELECT tconst, nconst, category 
 FROM split_writers
 ) AS combined
-WHERE category IS NOT NULL AND category <> '';
+WHERE nconst IS NOT NULL AND category IS NOT NULL AND category <> '';
 
 -- title.principals (BridgeCrew)
 
