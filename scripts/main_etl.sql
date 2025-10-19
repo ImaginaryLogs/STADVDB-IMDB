@@ -191,8 +191,20 @@ WHERE nconst IS NOT NULL AND category IS NOT NULL AND category <> '';
 
 -- title.principals (BridgeCrew)
 -- possible err due to duplicates from previous insert
-INSERT IGNORE INTO imdb.BridgeCrew(title_key,person_key,category,job,characters)
-SELECT tconst, nconst, category, job, characters FROM title_principals;
+-- batch uploading because it was being annoying before
+SET @batch_size = 100000;
+SET @offset = 0;
+
+REPEAT
+  INSERT IGNORE INTO imdb.BridgeCrew(title_key,person_key,category,job,characters)
+  SELECT tconst, nconst, category, job, characters
+  FROM imdb_source.title_principals
+  LIMIT @batch_size OFFSET @offset;
+
+  SET @offset = @offset + @batch_size;
+UNTIL ROW_COUNT() = 0
+END REPEAT;
+
 
 -- title.episodes/title.ratings/DimTitle (FactRatings)
 
