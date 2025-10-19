@@ -67,7 +67,9 @@ INSERT INTO imdb.DimTitle(title_key,title_type,primary_title,original_title,rele
 SELECT 
 tb.tconst,tb.titleType,tb.primaryTitle,tb.originalTitle,tb.startYear,tb.endYear,(
 	SELECT one_hot_encode_genres(tb.genres)
-),tb.runtimeMinutes,tb.isAdult
+),
+(CASE WHEN tb.runtimeMinutes IS NULL THEN 0 ELSE tb.runtimeMinutes END),
+tb.isAdult
 FROM imdb_source.title_basics tb;
 
 
@@ -102,7 +104,7 @@ END //
 DELIMITER ;
 
 INSERT INTO imdb.DimPerson(person_key,full_name,birth_year,death_year,profession)
-SELECT nb.nconst,nb.primaryName,nb.birthYear,nb.deathYear,(
+SELECT nb.nconst,(CASE WHEN nb.primaryName IS NULL THEN 'unknown' ELSE nb.primaryName END ),(CASE WHEN nb.birthYear IS NULL THEN 0 ELSE nb.birthYear END ),nb.deathYear,(
 	SELECT one_hot_encode_professions(nb.primaryProfession)
 ) FROM imdb_source.name_basics nb;
 
@@ -145,7 +147,7 @@ WITH RECURSIVE split_directors AS (
 	'director' AS category,
 	
 	TRIM(SUBSTRING_INDEX(directors,',',1)) AS nconst,
-	SUBSTRING(directors, LENGTH(TRIM(SUBSTRING_INDEX(directors,',',1))) + 1) AS extra
+	SUBSTRING(directors, LENGTH(TRIM(SUBSTRING_INDEX(directors,',',1))) + 2) AS extra
 	FROM title_crew
 	
 	UNION ALL
@@ -154,7 +156,7 @@ WITH RECURSIVE split_directors AS (
 	tconst,
 	'director' AS category,
 	TRIM(SUBSTRING_INDEX(extra,',',1)) AS nconst,
-	SUBSTRING(extra,LENGTH(TRIM(SUBSTRING_INDEX(extra,',',1)))+1) AS extra
+	SUBSTRING(extra,LENGTH(TRIM(SUBSTRING_INDEX(extra,',',1)))+2) AS extra
 	FROM split_directors
 	WHERE extra <> ''
 ), 
@@ -163,7 +165,7 @@ split_writers AS (
 	tconst,
 	'writer' AS category,
 	TRIM(SUBSTRING_INDEX(writers,',',1)) AS nconst,
-	SUBSTRING(writers, LENGTH(TRIM(SUBSTRING_INDEX(writers,',',1))) + 1) AS extra
+	SUBSTRING(writers, LENGTH(TRIM(SUBSTRING_INDEX(writers,',',1))) + 2) AS extra
 	FROM title_crew
 	
 	UNION ALL
@@ -172,7 +174,7 @@ split_writers AS (
 	tconst,
 	'writer' AS category,
 	TRIM(SUBSTRING_INDEX(extra,',',1)) AS nconst,
-	SUBSTRING(extra,LENGTH(TRIM(SUBSTRING_INDEX(extra,',',1)))+1) AS extra
+	SUBSTRING(extra,LENGTH(TRIM(SUBSTRING_INDEX(extra,',',1)))+2) AS extra
 	FROM split_writers
 	WHERE extra <> ''
 )
