@@ -1,4 +1,7 @@
 use imdb_source;
+
+SET SESSION cte_max_recursion_depth = 10000;
+
 INSERT INTO imdb.DimGenre (genre_name, genre_key) VALUES 
 ('Documentary', 1),
 ('Short', 2),
@@ -133,10 +136,10 @@ SELECT title_key, person_key, is_winner, class, canonical_category, category, ce
 FROM split_nominees
 WHERE person_key <> '' AND person_key <> '?';
 
--- funny bridge crew P1 (from title.crews)
+-- funny title.crew P1 (BridgeCrew)
 
 INSERT INTO imdb.BridgeCrew(title_key,person_key,category)
-WITH RECURSIVE split_directors  AS (
+WITH RECURSIVE split_directors AS (
 	SELECT 
 	tconst,
 	'director' AS category,
@@ -182,3 +185,23 @@ SELECT tconst, nconst, category
 FROM split_writers
 ) AS combined
 WHERE category IS NOT NULL AND category <> '';
+
+-- title.principals (BridgeCrew)
+
+INSERT INTO BridgeCrew(title_key,person_key,category,job,characters)
+SELECT tconst, nconst, category, job, characters FROM title_principals;
+
+-- title.episodes/title.ratings/DimTitle (FactRatings)
+
+INSERT INTO imdb.FactRatings(title_key,genre,episode_key,avg_rating,num_votes)
+SELECT te.parenttconst,dt.genre,tconst,averageRating, numVotes 
+FROM imdb_source.title_ratings tr
+JOIN imdb_source.title_episode te ON te.parenttconst = tr.tconst
+JOIN imdb.DimTitle dt ON dt.tconst = te.parenttconst
+
+-- DimTitle/DimPerson/FactRatings (FactCrewPerformancePerFilmGenre)
+INSERT INTO imdb.FactCrewPerformancePerFilmGenre(title,person_key,genre,avg_rating,num_votes,release_year)
+SELECT bc.title_key,bc.person_key,dt.genre,fr.avg_rating,fr.num_votes,dt.release_year
+FROM DimTitle dt
+JOIN BridgeCrew bc ON bc.title_key = dt.title_key
+JOIN FactRatings fr ON fr.title_key = dt.title_key

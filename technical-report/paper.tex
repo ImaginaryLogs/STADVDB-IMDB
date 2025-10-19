@@ -1,0 +1,159 @@
+%% 
+%% Technical Paper Template for CCS
+%%
+%% Adapted from SIGCONF Proceedings template
+%%
+
+%%
+%% The first command in your LaTeX source must be the \documentclass command.
+\documentclass[sigconf, pbalance]{acmart}
+
+\AtBeginDocument{%
+  \providecommand\BibTeX{{%
+    \normalfont B\kern-0.5em{\scshape i\kern-0.25em b}\kern-0.8em\TeX}}}
+
+%%
+%% Remove the ACM References statement and copyright notice.
+\settopmatter{printacmref=false}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+
+
+%%
+%% Majority of ACM publications use numbered citations and references.
+%% For managing citations, it is recommended to use bibliography files in BibTeX format.
+%% You can then either use BibTeX with the ACM-Reference-Format style,
+%% or BibLaTeX with the acmnumeric or acmauthoryear sytles, that include
+%% support for advanced citation of software artefact from the
+%% biblatex-software package, also separately available on CTAN.
+%%
+%% Look at the sample-reference.bib file enumerating your References.
+
+
+%% %% %% %% %%
+%% Start of the actual paper.
+\begin{document}
+
+%%
+%% Paper title.
+\title{The Name of the Title is Hope}
+
+%%
+%% Authors
+
+\author{Roan Campo}
+\affiliation{%
+	\institution{De La Salle University}
+	\city{Manila}
+	\country{Philippines}}
+\email{roan_campo@dlsu.edu.ph}
+
+\author{Renzo Chua}
+\affiliation{%
+  \institution{De La Salle University}
+  \city{Manila}
+  \country{Philippines}}
+\email{renzo_chua@dlsu.edu.ph}
+
+\author{Kenneth Go}
+\affiliation{%
+  \institution{De La Salle University}
+  \city{Manila}
+  \country{Philippines}}
+\email{kenneth_dy_go@dlsu.edu.ph}
+
+\author{Nathaniel Adiong}
+\affiliation{%
+	\institution{De La Salle University}
+	\city{Manila}
+	\country{Philippines}}
+\email{nathaniel_irvin_adiong@dlsu.edu.ph}
+
+%%
+%% By default, the full list of authors will be used in the page headers.
+%% Often, this list is too long and will overlap other information printed in the page headers. 
+%% This command allows the author to define a more concise list of authors' names for this purpose.
+\renewcommand{\shortauthors}{Trovato et al.}
+
+
+%%
+%% The abstract is a short summary of the work to be presented in the article.
+\begin{abstract}
+This set of guidelines for formatting your research paper has been adapted from the formatting guidelines for ACM SIG Proceedings. The Abstract should consist of 150 to 250 words in a single paragraph that provides the reader with a summary of your research/project and what you intend to do. It gives a brief description of the motivation for your research/project, the problem you intend to cover, the purpose and method for conducting your study, and your results and findings.
+\end{abstract}
+
+
+%%
+%% Keywords
+%% The author(s) should pick words that accurately describe the work being presented. 
+%% Separate the keywords with commas.
+%% Aside from proper nouns and acronyms, only the first letter of the first keyword should be capitalized
+\keywords{Data Warehouse, ETL, OLAP, Query Processing, Query Optimization}
+
+%%
+%% This command processes the author and affiliation and title information and builds the first part of the formatted document.
+\maketitle
+
+%%
+%%
+%% --- Introduction ---
+%%
+\section{Introduction}
+
+Conference proceedings and journal publications usually ask authors to follow a set of guidelines to make the paper appear of high quality. Some of our courses require students to adapt these guidelines to prepare them for publishing their work. Thus, it is mandatory that you ensure your research / technical paper look exactly like this document. The easiest way to do this is to simply download a copy of this document and type-over the contents with your own material. Do not change any formatting or introduce your own style.
+
+
+%%
+%%
+%% --- Basic Elements ---
+%%
+\section{Data Warehouse}
+
+\section{ETL Script}
+
+\section{OLAP Application}
+
+\section{Query Processing and Optimization}
+
+\section{Results and Analysis}
+
+The sections for your Technical Report are described in the corresponding project specifications found in AnimoSpace. 
+To use this ACM paper template, replace each section with the required section heading as indicated in the project specifications. For example, for MCO1, the sections are:
+\begin{verbatim}
+    1. Introduction
+    2. Data Warehouse
+    3. ETL Script
+    4. OLAP Application
+    5. Query Processing and Optimization
+    6. Results and Analysis
+    7. Conclusion
+    8. References
+    9. Declarations
+\end{verbatim}
+
+You may optionally include an Appendix to show your code snippets, SQL statements, sample extract of the dataset, and sample query results.
+
+
+
+%%
+%% The next two lines define the bibliography style to be used, and
+%% the bibliography file.
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{sample-reference}
+
+
+
+%%
+%%
+%% --- Appendices ---
+%%
+\appendix
+
+\section{Appendices}
+Some conference papers include an Appendix where authors can place supplementary materials. 
+
+For our Technical Report, supplementary materials may include code snippets, SQL statements, sample extract of the dataset, and sample query results. These are used to help your readers better understand your implementation and your discussion.
+
+Note that in the appendix, sections are lettered, not
+numbered. 
+
+\end{document}

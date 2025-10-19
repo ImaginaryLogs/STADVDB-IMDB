@@ -49,7 +49,7 @@ CREATE TABLE FactOscarAwards (
 	category VARCHAR(255),
 	ceremony_year INT,
 	FOREIGN KEY (title_key) REFERENCES DimTitle(title_key),
-	FOREIGN KEY (person_key) REFERENCES DimPerson(person_key),
+	FOREIGN KEY (person_key) REFERENCES DimPerson(person_key)
 )ENGINE=InnoDB;
 
 CREATE TABLE FactCrewPerformancePerFilmGenre (
