@@ -115,7 +115,7 @@ SELECT tconst, parenttconst, seasonNumber, episodeNumber FROM imdb_source.title_
 
 
 -- full_data (FactOscarAwards)
-INSERT INTO imdb.FactOscarAwards(title_key,person_key,is_winner,class,canonical_category,category,ceremony_year)
+INSERT IGNORE INTO imdb.FactOscarAwards(title_key,person_key,is_winner,class,canonical_category,category,ceremony_year)
 WITH RECURSIVE split_nominees AS (
 	SELECT
 		oa.filmId AS title_key,
@@ -140,7 +140,8 @@ WHERE person_key <> '' AND person_key <> '?';
 
 -- funny title.crew P1 (BridgeCrew)
 
-INSERT INTO imdb.BridgeCrew(title_key,person_key,category)
+-- possible error due to tconst being fake
+INSERT IGNORE INTO imdb.BridgeCrew(title_key,person_key,category)
 WITH RECURSIVE split_directors AS (
 	SELECT 
 	tconst,
@@ -156,7 +157,7 @@ WITH RECURSIVE split_directors AS (
 	tconst,
 	'director' AS category,
 	TRIM(SUBSTRING_INDEX(extra,',',1)) AS nconst,
-	SUBSTRING(extra,LENGTH(TRIM(SUBSTRING_INDEX(extra,',',1)))+2) AS extra
+	SUBSTRING(extra,LENGTH(TRIM(SUBSTRING_INDEX(extra,',',1))) + 2) AS extra
 	FROM split_directors
 	WHERE extra <> ''
 ), 
@@ -174,7 +175,7 @@ split_writers AS (
 	tconst,
 	'writer' AS category,
 	TRIM(SUBSTRING_INDEX(extra,',',1)) AS nconst,
-	SUBSTRING(extra,LENGTH(TRIM(SUBSTRING_INDEX(extra,',',1)))+2) AS extra
+	SUBSTRING(extra,LENGTH(TRIM(SUBSTRING_INDEX(extra,',',1))) + 2) AS extra
 	FROM split_writers
 	WHERE extra <> ''
 )
@@ -186,20 +187,20 @@ UNION ALL
 SELECT tconst, nconst, category 
 FROM split_writers
 ) AS combined
-WHERE category IS NOT NULL AND category <> '';
+WHERE nconst IS NOT NULL AND category IS NOT NULL AND category <> '';
 
 -- title.principals (BridgeCrew)
-
-INSERT INTO BridgeCrew(title_key,person_key,category,job,characters)
+-- possible err due to duplicates from previous insert
+INSERT IGNORE INTO imdb.BridgeCrew(title_key,person_key,category,job,characters)
 SELECT tconst, nconst, category, job, characters FROM title_principals;
 
 -- title.episodes/title.ratings/DimTitle (FactRatings)
 
-INSERT INTO imdb.FactRatings(title_key,genre,episode_key,avg_rating,num_votes)
-SELECT te.parenttconst,dt.genre,tconst,averageRating, numVotes 
+INSERT IGNORE INTO imdb.FactRatings(title_key,genre,episode_key,avg_rating,num_votes)
+SELECT te.parenttconst,dt.genre,tr.tconst,tr.averageRating, tr.numVotes 
 FROM imdb_source.title_ratings tr
 JOIN imdb_source.title_episode te ON te.parenttconst = tr.tconst
-JOIN imdb.DimTitle dt ON dt.tconst = te.parenttconst
+JOIN imdb.DimTitle dt ON dt.title_key = te.parenttconst;
 
 -- DimTitle/DimPerson/FactRatings (FactCrewPerformancePerFilmGenre)
 INSERT INTO imdb.FactCrewPerformancePerFilmGenre(title,person_key,genre,avg_rating,num_votes,release_year)
