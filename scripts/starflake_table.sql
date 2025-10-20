@@ -108,5 +108,5 @@ CREATE INDEX idx_dimtitle_releaseyear ON DimTitle(release_year);
 CREATE INDEX idx_factratings_titlekey ON FactRatings(title_key);
 CREATE INDEX idx_dimtitle_genre_year ON DimTitle(genre, release_year);
 CREATE INDEX idx_factratings_avgvotes ON FactRatings(avg_rating, num_votes);
-
+CREATE INDEX idx_dimperson_fullname ON DimPerson(full_name);
 
