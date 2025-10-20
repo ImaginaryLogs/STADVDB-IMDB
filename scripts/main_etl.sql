@@ -1,6 +1,7 @@
 use imdb_source;
 
 SET SESSION cte_max_recursion_depth = 10000;
+SET GLOBAL innodb_buffer_pool_size = 8589934592;
 
 INSERT INTO imdb.DimGenre (genre_name, genre_key) VALUES 
 ('Documentary', 1),
@@ -192,31 +193,23 @@ WHERE nconst IS NOT NULL AND category IS NOT NULL AND category <> '';
 -- title.principals (BridgeCrew)
 -- possible err due to duplicates from previous insert
 -- batch uploading because it was being annoying before
-SET @batch_size = 100000;
-SET @offset = 0;
 
-REPEAT
-  INSERT IGNORE INTO imdb.BridgeCrew(title_key,person_key,category,job,characters)
-  SELECT tconst, nconst, category, job, characters
-  FROM imdb_source.title_principals
-  LIMIT @batch_size OFFSET @offset;
-
-  SET @offset = @offset + @batch_size;
-UNTIL ROW_COUNT() = 0
-END REPEAT;
+INSERT IGNORE INTO imdb.BridgeCrew(title_key, person_key, category, job, characters)
+SELECT tconst, nconst, category, job, characters
+FROM imdb_source.title_principals;
 
 
 -- title.episodes/title.ratings/DimTitle (FactRatings)
 
 INSERT IGNORE INTO imdb.FactRatings(title_key,genre,episode_key,avg_rating,num_votes)
-SELECT te.parenttconst,dt.genre,tr.tconst,tr.averageRating, tr.numVotes 
+SELECT te.parenttconst,dt.genre,(CASE WHEN te.parenttconst = tr.tconst THEN NULL ELSE tr.tconst END),tr.averageRating, tr.numVotes 
 FROM imdb_source.title_ratings tr
-JOIN imdb_source.title_episode te ON te.parenttconst = tr.tconst
+LEFT JOIN imdb_source.title_episode te ON te.parenttconst = tr.tconst
 JOIN imdb.DimTitle dt ON dt.title_key = te.parenttconst;
 
 -- DimTitle/DimPerson/FactRatings (FactCrewPerformancePerFilmGenre)
-INSERT INTO imdb.FactCrewPerformancePerFilmGenre(title,person_key,genre,avg_rating,num_votes,release_year)
+INSERT INTO imdb.FactCrewPerformancePerFilmGenre(title_key,person_key,genre,avg_rating,num_votes,release_year)
 SELECT bc.title_key,bc.person_key,dt.genre,fr.avg_rating,fr.num_votes,dt.release_year
-FROM DimTitle dt
-JOIN BridgeCrew bc ON bc.title_key = dt.title_key
-JOIN FactRatings fr ON fr.title_key = dt.title_key
+FROM imdb.DimTitle dt
+JOIN imdb.BridgeCrew bc ON bc.title_key = dt.title_key
+JOIN imdb.FactRatings fr ON fr.title_key = dt.title_key
