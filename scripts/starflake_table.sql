@@ -17,14 +17,13 @@ CREATE TABLE DimPerson (
 	full_name VARCHAR(128) NOT NULL,
 	birth_year INT NOT NULL,
 	death_year INT,
-	profession VARCHAR(48)
+	profession VARCHAR(48) 
 )ENGINE=InnoDB;
   
 CREATE TABLE DimProfession (
 	profession_key TINYINT NOT NULL PRIMARY KEY,
 	profession_name VARCHAR(64)
 )ENGINE=InnoDB;  
-
 
 CREATE TABLE DimTitle (
 	title_key VARCHAR(16) NOT NULL PRIMARY KEY,
