@@ -112,47 +112,11 @@ Conference proceedings and journal publications usually ask authors to follow a 
 
 \section{OLAP Application}
 
-The \textbf{IMDb Analytics Dashboard} is a web-based OLAP (Online Analytical Processing) application that gives clear insights into movie industry trends, performance, and statistics. Built with Next.js and React for the frontend and MySQL for the backend, the dashboard helps producers, directors, investors, and studios make smarter, data-based decisions. Its main goal is to support data-driven decision-making by showing useful analytics on movie performance, crew success, audience engagement, and statistical trends.
+The \textbf{IMDb Analytics Dashboard} is a web-based OLAP (Online Analytical Processing) application designed to analyze and visualize movie industry data for enhanced decision-making. Built using \textbf{Next.js} and \textbf{React} for the frontend and \textbf{MySQL} for the backend, it provides users such as producers, directors, investors, and studios with interactive tools to explore trends, evaluate performance, and discover meaningful patterns across movies, actors, genres, and awards.
 
-\subsection{Core Analytical Features}
+\subsection{Main Purpose}
 
-\subsubsection{Basic Statistics}
-
-The dashboard presents key descriptive analytics through  visualizations, including:
-
-\begin{itemize}
-    \item \textbf{Genre Distribution} – Shows the proportion of movies across different genres.
-    \item \textbf{Ratings Trend by Year} – Tracks how movie ratings have evolved over time.
-    \item \textbf{Top Rated Movies} – Highlights the highest-rated films within selected periods.
-    \item \textbf{Awards by Category} – Displays counts and trends of award nominations and wins per category.
-    \item \textbf{Popular Actors} – Ranks actors based on audience engagement and average ratings.
-    \item \textbf{Successful Crew Members} – Identifies top-performing directors, writers, and producers.
-    \item \textbf{Best Film Genre (Past Decade)} – Determines which genre has performed best over the last ten years.
-    \item \textbf{Ratio of Actor Professions} – Compares the distribution of professions (e.g., actors, directors, writers).
-    \item \textbf{Popularity of Actors per Genre} – Examines which actors perform best within specific genres.
-\end{itemize}
-
-\subsubsection{Statistical and Inferential Analysis}
-
-Beyond descriptive analytics, the dashboard incorporates  statistical techniques for deeper insight:
-
-\begin{itemize}
-    \item \textbf{Correlation Analysis (Pearson):} Measures the relationship between movie ratings and the number of audience votes, identifying whether higher popularity correlates with higher ratings.
-    \item \textbf{Chi-Square Test:} Evaluates the association between movie genre and award wins, determining whether award distribution is genre-dependent.
-    \item \textbf{Hypothesis Testing (T-Test):} Compares the average genre ratings against the overall population mean, assessing whether specific genres significantly outperform or underperform the industry average.
-\end{itemize}
-
-\subsection{Decision-Making and Analytical Tasks}
-
-The \textbf{IMDb Analytics Dashboard} supports multiple decision-making processes, including:
-
-\begin{enumerate}
-    \item \textbf{Genre Popularity Analysis:} Determines top-performing genres that can be used for strategic production planning.
-    \item \textbf{Crew Performance Evaluation:} Assesses directors, writers, and actors based on historical performance metrics.
-    \item \textbf{Trend Analysis:} Examines rating and production changes over time to identify optimal release periods.
-    \item \textbf{Award Prediction and Analysis:} Studies nomination and win trends to refine awards campaign strategies.
-    \item \textbf{Actor-Genre Affinity:} Analyzes actor success within genres to guide casting and marketing decisions.
-\end{enumerate}
+The main purpose of the \textbf{IMDb Analytics Dashboard} is to support \textbf{data-driven decision-making} in the film industry by aggregating, summarizing, and analyzing large sets of movie-related data. Through multi-dimensional OLAP operations such as \textbf{roll-up}, \textbf{slice}, \textbf{dice}, and \textbf{drill-down}, the application enables users to view information from different perspectives and at varying levels of detail. This allows stakeholders to identify popular actors, successful genres, professional distributions, and award trends which can help contribute to smarter production, casting, and investment choices.
 
 
 \subsection{Analytical Reports and SQL Implementation}
