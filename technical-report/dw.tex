@@ -1,0 +1,51 @@
+The group decided to use the Starflake schema, a mix of star and snowflake to get the most out of both schemas in order to have more fact tables to better centralize the dataset to films, awards and crew performance. 
+\subsection{Fact Tables}
+\subsubsection{Oscar Awards}
+To get the awards data the group added another dataset that contains the oscar awards. In this dataset it follows the same format of IMDB where the format contains tt and nm followed by a list of numbers for the title and nominee respectively. This data gets stored in the table FactOscarAwards. 
+\subsubsection{Ratings}
+On the other hand FactRatings gets the ratings data from the original source which includes the series key and episode key if its a series else it outputs only the film key where episode key is null if its not contained in the episode dimension table. 
+\subsubsection{Crew Performance Per Film Genre}
+Lastly the table FactCrewPerformancePerGenre stores the crew performance given the performance of the film or episode and the entire crew for that film. Each row contains one crew member tied to one film or episode and the rating details from FactRatings. 
+
+\subsection{Dimensions}
+In the schema there are six dimension tables, DimEpisode, DimTitle, DimPerson, DimProfession, DimGenre, and BridgeCrew
+ 
+ \subsubsection{Title}
+DimTitle stores the title data from the title.basics and the year data of each title. The hierarchy goes from Year to Release Decade. The table also stores a one hot encoded genre string.
+
+\subsubsection{Episode}
+DimEpisode stores the episode data containing the season number and episode number as the hierarchy.
+
+\subsubsection{Person}
+DimPerson contains the full name of the person, birth year and a death year if its included. The DimPerson table also includes a one hot encoded version of the profession given that it is possible for the person to have more than 1 profession.
+
+\subsubsection{Genre}
+DimGenre is a lookup table that contains the indexes and name of the genre for the one hot encoded genre in the previous tables. The main reason the group decided to stick to one hot encoding was because it became easier to store the genres given a title since the original dataset gave a list of genres per title. 
+
+\subsubsection{Professions}
+DimProfession is a lookup table that contains the indexes and name of the profession as well.
+The same reasoning applies to the one hot encoded version of professions due to it being easier to read and analyze a one hot encoded string rather than a string seperated by comma for the professions.
+
+\subsubsection{Crew}
+BridgeCrew contains the category type of job and the job of the person given the title. The dimension table also has an optional characters field given that the person was an actor for that title.
+
+\subsection{Issues}
+One of the original issues that was addressed by the one hot encoding were the constant fields that could be one hot encoded such as genre and professions since all it takes is to check whether or not the title applies it. Besides this the group created functions in MySQL to convert the input genres seeprated by comma to one hot encoded data. 
+\newline
+
+During the ETL one of the problems that the group encountered was converting data from lists from the original dataset to multiple rows. For example to convert the directors and writers from title crews to BridgeCrew the group had to flatten the strings and map it out to rows. To solve this problem the group decided to use a recursive common table expression to map out the dataset to BridgeCrew. 
+\newline
+Another issue that the group encountered were some data having no references to the other dimension tables. To fix this issue the group decided to add IGNORE during inserts for some tables such as BridgeCrew because some pieces of data doesn't reference other tables in the dataset, for instance in title principals and title crew it did not properly reference some keys from the name basics table and most were duplicated already given that directors and writers can be inside the title crews table.
+\newline
+
+
+
+
+
+Present your dimensional model. 
+What are the contents of your fact table?
+What are your dimensions? Describe the hierarchy per dimension.
+Justify your choice of dimensions and facts.
+What issues did you encounter in your model / schema design? How did you address these?
+Use figures and tables accordingly.
+Cite related literature to support your design decisions.
