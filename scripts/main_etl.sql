@@ -262,3 +262,40 @@ SELECT bc.title_key,bc.person_key,dt.genre,fr.avg_rating,fr.num_votes,dt.release
 FROM imdb.DimTitle dt
 JOIN imdb.BridgeCrew bc ON bc.title_key = dt.title_key
 JOIN imdb.FactRatings fr ON fr.title_key = dt.title_key
+
+DELIMITER $$
+
+CREATE PROCEDURE auto_generate_genre_columns()
+BEGIN
+    DECLARE done INT DEFAULT 0;
+    DECLARE gname VARCHAR(64);
+    DECLARE cur CURSOR FOR 
+        SELECT genre_name FROM DimGenre;
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+
+    OPEN cur;
+    read_loop: LOOP
+        FETCH cur INTO gname;
+        IF done THEN
+            LEAVE read_loop;
+        END IF;
+
+        SET @colname = CONCAT('is_genre_', REPLACE(REPLACE(gname, '-', ''), ' ', ''));
+        SET @sql = CONCAT('ALTER TABLE DimTitle ADD COLUMN IF NOT EXISTS ', @colname, ' BOOLEAN DEFAULT 0;');
+        PREPARE stmt FROM @sql;
+        EXECUTE stmt;
+        DEALLOCATE PREPARE stmt;
+
+        -- Optional: index each genre
+        SET @sql = CONCAT('CREATE INDEX IF NOT EXISTS idx_title_', @colname, ' ON DimTitle(', @colname, ');');
+        PREPARE stmt FROM @sql;
+        EXECUTE stmt;
+        DEALLOCATE PREPARE stmt;
+    END LOOP;
+    CLOSE cur;
+END $$
+
+DELIMITER ;
+
+-- Run it
+CALL auto_generate_genre_columns();

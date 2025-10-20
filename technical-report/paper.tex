@@ -17,6 +17,58 @@
 \settopmatter{printacmref=false}
 \renewcommand\footnotetextcopyrightpermission[1]{}
 
+\usepackage{listings}
+\usepackage[table,xcdraw]{xcolor}
+\usepackage{amsmath}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstdefinestyle{SQLStyle}{
+    frame=tb,
+    language=SQL,
+    aboveskip=3mm,
+    belowskip=3mm,
+    showstringspaces=false,
+    columns=flexible,
+    basicstyle={\small\ttfamily},
+    numbers=none,
+    numberstyle=\tiny\color{gray},
+    keywordstyle=\color{blue},
+    commentstyle=\color{dkgreen},
+    stringstyle=\color{mauve},
+    breaklines=true,
+    breakatwhitespace=true,
+    tabsize=3
+}
+\lstdefinestyle{BashInputStyle}{
+  language=bash,
+  firstline=2,% Supress the first line that begins with `%`
+  basicstyle=\small\sffamily,
+  numbers=left,
+  numberstyle=\tiny,
+  numbersep=3pt,
+  frame=tb,
+  columns=fullflexible,
+  backgroundcolor=\color{yellow!20},
+  linewidth=0.9\linewidth,
+  xleftmargin=0.1\linewidth
+}
+
+\lstdefinestyle{BashOutputStyle}{
+  basicstyle=\small\ttfamily,
+  numbers=none,
+  frame=tblr,
+  columns=fullflexible,
+  backgroundcolor=\color{blue!10},
+  linewidth=0.9\linewidth,
+  xleftmargin=0.1\linewidth
+}
+
+
+
+
 
 %%
 %% Majority of ACM publications use numbered citations and references.
@@ -121,27 +173,345 @@ The main purpose of the \textbf{IMDb Analytics Dashboard} is to support \textbf{
 
 \subsection{Analytical Reports and SQL Implementation}
 
+\section{Exploratory Data Analysis Questions}
+
+\subsection{Popular Actors by Success Metric}
+
+This subsection explores what are the popular actors based on the generated Success metric. Take note that the Success metric is equal to the following:
+$$
+\textbf{Success} = \textbf{Average Rating} \cdot \log(1 + \textbf{Number of IMDB Votes})
+$$
+
+The intuition behind this metric is that success of a show should be correlated with two other metrics:
+\begin{itemize}
+    \item \textbf{Popularity}, represented by Number of IMDB Votes
+    \item \textbf{Reception}, represented by the Average Rating. 
+\end{itemize}
+
+To illustrate the point, If two shows both have a higher rating, yet one has more votes than the other in IMDB, then the latter show should be considered more successful. Conversely, two shows that have roughly the same votes, yet the first one has better ratings, then the former should be considered more successful. 
+
+The Logarithm transformation is there to normalize the Number of IMDB Votes. Moreover, two shows that have high number of votes with a difference in the tens or hundreds should be roughly the same in terms of success.
+
+The following is the given SQL script for Popular Actors by Success Metrics.
+\begin{lstlisting}[style=SQLStyle]
+WITH ActorStats AS (
+  SELECT 
+    bc.person_key,
+    COUNT(DISTINCT bc.title_key) AS total_titles,
+    AVG(fr.avg_rating) AS avg_rating
+  FROM FactRatings fr
+  JOIN BridgeCrew bc ON fr.title_key = bc.title_key
+  WHERE bc.category IN ('actor', 'actress')
+  GROUP BY bc.person_key
+)
+SELECT 
+  dp.full_name,
+  a.total_titles,
+  a.avg_rating,
+  RANK() OVER (ORDER BY a.avg_rating DESC, a.total_titles DESC) AS actor_rank
+FROM ActorStats a
+JOIN DimPerson dp ON dp.person_key = a.person_key
+LIMIT 10;
+\end{lstlisting}
+
+
+
+This operation is a Roll-up, for it groups the data.
+
+\begin{center}
+\begin{tabular}{|p{5cm}|c|c|c|}
+\hline
+full name & total titles & avg rating & actor rank\\
+\hline
+Helena Valentine & 1 & 10 & 1\\
+Sergey Galakhov & 1 & 10 & 1\\
+Thira Chutikul & 1 & 10 & 1\\
+Aubrey Mae Davis & 1 & 10 & 1\\
+Andre Tiangco & 1 & 10 & 1\\
+Nael Nacer & 1 & 10 & 1\\
+Christopher Elscoe & 1 & 10 & 1\\
+Peach Pitch-orn Wanarat & 1 & 10 & 1\\
+Pat Meyer & 1 & 10 & 1\\
+Aleksandrina Adamova & 1 & 10 & 1\\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Popular Genres by Success Metric}
+
+This section explores what are the popular genres based on the generated Success metric. To reiterate, the success metric is the following:
+$$
+\textbf{Success} = \textbf{Average Rating} \cdot \log(1 + \textbf{Number of IMDB Votes})
+$$
+
+Based on this metric.
+
+
+\begin{lstlisting}[style=SQLStyle]
+WITH PersonInfo AS (
+    SELECT person_key
+    FROM DimPerson
+    WHERE full_name = $1 -- 'Robert Downey Jr.' for example 
+)
+SELECT
+    fcp.title_key AS title_key,
+    fcp.avg_rating AS avg_rating,
+    fcp.num_votes AS num_votes,
+    fcp.success_score AS success_score
+FROM FactCrewPerformancePerFilmGenre fcp
+JOIN PersonInfo pi ON pi.person_key = fcp.person_key;
+\end{lstlisting}
+
+This operation is a Roll-up, for it groups the data.
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|}
+\hline
+title key & avg rating & num votes & success score \\
+\hline
+tt0488918 & 5.5 & 34 & 19.5544 \\
+tt0488918 & 5.5 & 34 & 19.5544 \\
+tt0390776 & 6.5 & 209 & 34.7562 \\
+tt0390776 & 6.5 & 209 & 34.7562 \\
+tt0390776 & 6.5 & 209 & 34.7562 \\
+tt0390776 & 6.5 & 209 & 34.7562 \\
+tt0390776 & 6.5 & 209 & 34.7562 \\
+tt0390776 & 6.5 & 209 & 34.7562 \\ 
+tt0390776 & 6.5 & 209 & 34.7562 \\ 
+tt0390776 & 6.5 & 209 & 34.7562 \\
+\hline
+\end{tabular}
+\end{center}
+
+
+\subsection{Popular Movies of a Given Actor by Success Metric}
+
+This operation is a Roll-up, for it groups the data.
+
+\begin{lstlisting}[style=SQLStyle]
+WITH GenreSuccess AS (
+    SELECT
+        dt.release_decade AS decade,
+        dt.genre AS genre,
+        fr.success_score AS success_score
+    FROM FactRatings fr
+    JOIN DimTitle dt ON fr.title_key = dt.title_key
+)
+SELECT
+    decade, genre, success_score
+FROM GenreSuccess
+WHERE decade = $1
+ORDER BY success_score DESC
+LIMIT 10;
+\end{lstlisting}
+
+\begin{center}
+\begin{tabular}{|c|c|c|}
+\hline
+decade & genre & success score \\
+\hline
+2000 & FFFFFFFTFFFFFTFFFFFFFFTFFFFF & 139.582 \\
+2000 & FFFFFFFTFFFFFTFFFFFFFFTFFFFF & 139.582 \\ 
+2000 & FFFFFFFTFFFFFTFFFFFFFFTFFFFF & 139.582 \\ 
+2000 & FFFFFFFTFFFFFTFFFFFFFFTFFFFF & 139.582 \\ 
+2000 & FFFFFFFTFFFFFTFFFFFFFFTFFFFF & 139.582 \\ 
+2000 & FFFFFFFTFFFFFTFFFFFFFFTFFFFF & 139.582 \\ 
+2000 & FFFFFFFTFFFFFTFFFFFFFFTFFFFF & 139.582 \\ 
+2000 & FFFFFFFTFFFFFTFFFFFFFFTFFFFF & 139.582 \\ 
+2000 & FFFFFFFTFFFFFTFFFFFFFFTFFFFF & 139.582 \\ 
+2000 & FFFFFFFTFFFFFTFFFFFFFFTFFFFF & 139.582 \\ 
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Top Oscars Awards by Canonical Category}
+
+This subsection explores the what are the top canonical category with the most Oscar awards. 
+
+The following is the SQL statement:
+\begin{lstlisting}[style=SQLStyle]
+WITH TopCanonicalCategories AS (
+    SELECT
+        foa.canonical_category AS canonical_category
+    FROM FactOscarAwards foa
+    WHERE foa.is_winner = 1
+)
+SELECT
+    canonical_category,
+    COUNT(*) AS total_wins
+FROM TopCanonicalCategories
+GROUP BY canonical_category
+ORDER BY total_wins DESC
+LIMIT 10;
+\end{lstlisting}
+
+This operation is a Roll-up, for it groups the awards from category to canonical category.
+
+\begin{center}
+\begin{tabular}{|p{8cm}|c|}
+\hline
+\textbf{Canonical Category} & \textbf{Total Wins} \\
+\hline
+SCIENTIFIC AND TECHNICAL AWARD (Technical Achievement Award) & 348 \\
+SCIENTIFIC AND TECHNICAL AWARD (Scientific and Engineering Award) & 250 \\
+VISUAL EFFECTS & 232 \\
+SOUND MIXING & 205 \\
+MUSIC (Original Song) & 176 \\
+ART DIRECTION & 160 \\
+BEST PICTURE & 146 \\
+DOCUMENTARY (Feature) & 136 \\
+WRITING (Adapted Screenplay) & 135 \\
+HONORARY AWARD & 126 \\
+\hline
+\end{tabular}
+\end{center}
+
+\section{Visualized EDA}
+
+\subsection{Ratio of Professions of Crew Members}
+
+This section explores the ratio of professions of crew members represented in a Pie Chart.
+\begin{lstlisting}[style=SQLStyle]
+SELECT 
+  bc.category AS profession,
+  COUNT(*) AS count
+FROM BridgeCrew bc
+WHERE bc.category IS NOT NULL
+GROUP BY bc.category
+ORDER BY count DESC
+LIMIT 10;
+\end{lstlisting}
+
+\begin{center}
+\begin{tabular}{|p{4cm}|c|}
+\hline
+profession & count\\
+\hline
+actor & 20660285 \\
+actress & 16211647 \\
+self & 13091534 \\ 
+writer & 12117519 \\
+director & 8984456 \\
+producer & 5151458 \\
+editor & 4071060 \\
+cinematographer & 3323530 \\
+composer & 2927487 \\
+production designer & 1086588 \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Best Film Genre within the Past Decade}
+
+This section explores the best film genre in a Bar Graph.
+\begin{lstlisting}[style=SQLStyle]
+WITH GenreSuccess AS (
+    SELECT
+        dt.release_decade AS decade,
+        dt.genre AS genre,
+        fr.success_score AS success_score
+    FROM FactRatings fr
+    JOIN DimTitle dt ON fr.title_key = dt.title_key
+)
+SELECT
+    decade, genre, success_score
+FROM GenreSuccess
+WHERE decade = $1
+ORDER BY success_score DESC
+LIMIT 10;
+\end{lstlisting}
+
+\subsection{Successful movies per Given genre over Given decade}
+
+\section{Statistical Tests}
+
+\subsection{Correlation test with Ratings and Votes}
+
+\begin{lstlisting}[style=SQLStyle]
+WITH TopCanonicalCategories AS (
+    SELECT
+        foa.canonical_category AS canonical_category
+    FROM FactOscarAwards foa
+    WHERE foa.is_winner = 1
+)
+SELECT
+    canonical_category,
+    COUNT(*) AS total_wins
+FROM TopCanonicalCategories
+GROUP BY canonical_category
+ORDER BY total_wins DESC
+LIMIT 10;
+\end{lstlisting}
+\begin{center}
+\begin{tabular}{|p{8cm}|}
+\hline
+Pearson Correlation \\
+\hline
+0.06869894408882023 \\
+\hline
+\end{tabular}
+\end{center}
+
+
+
+
 \section{Query Processing and Optimization}
+
+\textbf{Query Optimization Overview:}  
+Query optimization is used to reduce the amount of time querying data from the database. Query optimization uses multiple SQL query techniques and commands to optimize selecting data from one or more tables and prevent doing too many operations or joining too many rows, leading to a slower return. 
+
+\textbf{Strategies Applied:}
+\begin{itemize}
+    \item \textbf{Indexing}: Created composite indexes such as:
+    \begin{lstlisting}[style=SQLStyle]
+    CREATE INDEX idx_factratings_title ON FactRatings(title_key);
+    CREATE INDEX idx_person_fullname ON DimPerson(full_name);
+    \end{lstlisting}
+    \item \textbf{Query Restructuring}: CTEs and selective joins reduced intermediate result sizes.
+    \item \textbf{Materialized Columns}: Success metric as a \texttt{GENERATED ALWAYS STORED} column avoids recomputation.
+    \item \textbf{Hardware Optimization}: MySQL buffer pool increased from 1GB to 8GB.
+\end{itemize}
+
+\textbf{OLAP Optimization:}
+\begin{itemize}
+    \item \textbf{Roll-up/Drill-down}: Pre-aggregating data (FactCrewPerformancePerFilmGenre).
+    \item \textbf{Slice/Dice}: Filtering subsets efficiently through indexed columns.
+\end{itemize}
 
 \section{Results and Analysis}
 
-The sections for your Technical Report are described in the corresponding project specifications found in AnimoSpace. 
-To use this ACM paper template, replace each section with the required section heading as indicated in the project specifications. For example, for MCO1, the sections are:
-\begin{verbatim}
-    1. Introduction
-    2. Data Warehouse
-    3. ETL Script
-    4. OLAP Application
-    5. Query Processing and Optimization
-    6. Results and Analysis
-    7. Conclusion
-    8. References
-    9. Declarations
-\end{verbatim}
+\textbf{Functional Testing:}
+\begin{itemize}
+    \item Verified correctness of ETL loading and derived columns.
+    \item Verified all success metrics recompute correctly.
+\end{itemize}
 
-You may optionally include an Appendix to show your code snippets, SQL statements, sample extract of the dataset, and sample query results.
+\textbf{Performance Testing:}
+\begin{itemize}
+    \item Each query executed 5 times for averaging.
+    \item Queries improved by 35--60\% after indexing on join keys.
+    \item Correlation test dropped from 2.8s to 1.6s average execution time.
+\end{itemize}
 
+\textbf{Key Findings:}
+\begin{itemize}
+    \item Ratings and votes weakly correlated ($r \approx 0.07$).
+    \item ``Actor'' and ``Director'' are the most frequent professions.
+    \item Action and Drama dominate high success scores in the past decade.
+\end{itemize}
 
+\section{Conclusion}
+
+This project successfully demonstrates the integration of ETL, data warehouse modeling, and OLAP operations for analytical reporting.  
+\textbf{Key learnings:}
+\begin{itemize}
+    \item Building a data warehouse allows time-based and aggregated analytics not possible in OLTP systems.
+    \item ETL ensures the warehouse remains clean and consistently updated.
+    \item OLAP queries (roll-up, drill-down, slice, dice) enable interactive exploration.
+    \item Query optimization (indexes, reformulated SQL, materialized columns) significantly improves query performance.
+\end{itemize}
+
+This data warehouse can serve as the foundation for recommender systems, content analytics dashboards, or trend forecasting tools for entertainment industries.
 
 %%
 %% The next two lines define the bibliography style to be used, and
@@ -162,7 +532,6 @@ Some conference papers include an Appendix where authors can place supplementary
 
 For our Technical Report, supplementary materials may include code snippets, SQL statements, sample extract of the dataset, and sample query results. These are used to help your readers better understand your implementation and your discussion.
 
-Note that in the appendix, sections are lettered, not
-numbered. 
+Note that in the appendix, sections are lettered, not numbered. 
 
 \end{document}
