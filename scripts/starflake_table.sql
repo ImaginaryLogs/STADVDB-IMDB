@@ -97,8 +97,16 @@ CREATE TABLE BridgeCrew (
 CREATE INDEX idx_factratings_title ON FactRatings(title_key);
 CREATE INDEX idx_factoscar_person ON FactOscarAwards(person_key);
 CREATE INDEX idx_ftcgp_genre_year ON FactCrewPerformancePerFilmGenre (release_year);
-
-
-
+CREATE INDEX idx_bridgecrew_title_category ON BridgeCrew(title_key, category);
+CREATE INDEX idx_bridgecrew_person ON BridgeCrew(person_key);
+CREATE INDEX idx_factratings_title_avg ON FactRatings(title_key, avg_rating, num_votes);
+CREATE INDEX idx_bridgecrew_person_category ON BridgeCrew(person_key, category);
+CREATE INDEX idx_dimtitle_titlekey ON DimTitle(title_key);
+CREATE INDEX idx_factoscar_category_winner ON FactOscarAwards (class, canonical_category, is_winner);
+CREATE INDEX idx_factoscar_year ON FactOscarAwards (ceremony_year);
+CREATE INDEX idx_dimtitle_releaseyear ON DimTitle(release_year);
+CREATE INDEX idx_factratings_titlekey ON FactRatings(title_key);
+CREATE INDEX idx_dimtitle_genre_year ON DimTitle(genre, release_year);
+CREATE INDEX idx_factratings_avgvotes ON FactRatings(avg_rating, num_votes);
 
 
