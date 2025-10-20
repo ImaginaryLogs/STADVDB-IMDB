@@ -33,7 +33,7 @@ INSERT INTO imdb.DimGenre (genre_name, genre_key) VALUES
 ('Reality-TV', 27),
 ('Adult', 28);
 
-INSERT INTO imdb.DimProfession (profession_key, profession_name) VALUES
+INSERT INTO imdb.DimProfession (profession_name, profession_key) VALUES
 ('actor', 1),
 ('miscellaneous', 2),
 ('producer', 3),
@@ -80,7 +80,7 @@ INSERT INTO imdb.DimProfession (profession_key, profession_name) VALUES
 ('assistant', 44),
 ('production_department', 45),
 ('electrical_department', 46)
-
+;
 
 -- title.basics (DimTitle)
 DROP FUNCTION IF EXISTS one_hot_encode_genres;
@@ -113,10 +113,11 @@ END //
 DELIMITER ;
 
 INSERT INTO imdb.DimTitle(title_key,title_type,primary_title,original_title,release_year,end_year,genre,runtime_minutes,isAdult)
-SELECT 
-tb.tconst,tb.titleType,tb.primaryTitle,tb.originalTitle,tb.startYear,tb.endYear,(
-	SELECT one_hot_encode_genres(tb.genres)
-),
+SELECT tb.tconst,tb.titleType,tb.primaryTitle,
+tb.originalTitle,
+(CASE WHEN tb.startYear IS NULL THEN 0 ELSE tb.startYear END),
+tb.endYear,
+(SELECT one_hot_encode_genres(tb.genres)),
 (CASE WHEN tb.runtimeMinutes IS NULL THEN 0 ELSE tb.runtimeMinutes END),
 tb.isAdult
 FROM imdb_source.title_basics tb;

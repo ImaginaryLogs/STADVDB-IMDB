@@ -34,7 +34,7 @@ CREATE TABLE DimTitle (
 	end_year INT,  
 	genre VARCHAR(32) NOT NULL,
 	runtime_minutes INT NOT NULL, 
-	release_decade INT GENERATED ALWAYS AS (FLOOR(release_year / 16) * 16) STORED,
+	release_decade INT GENERATED ALWAYS AS (FLOOR(release_year / 10) * 10) STORED,
 	isAdult BOOL NOT NULL
 )ENGINE=InnoDB;  
 
