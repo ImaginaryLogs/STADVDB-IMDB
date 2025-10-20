@@ -42,50 +42,56 @@ export async function GET(request: Request) {
     console.log("\n📊 Fetching genre distribution...");
     
     const genreDistribution = await query<{ name: string; value: number }>(`
-      SELECT 
-        dg.genre_name as name,
-        COUNT(DISTINCT dt.title_key) AS value
-      FROM DimGenre dg
-      JOIN DimTitle dt ON SUBSTRING(dt.genre, dg.genre_key, 1) = 'T'
-      WHERE dt.title_type = 'movie'
-        AND dt.genre IS NOT NULL
-      GROUP BY dg.genre_name, dg.genre_key
-      ORDER BY value DESC
-      LIMIT 10
+        WITH MovieGenres AS (
+          SELECT 
+            dg.genre_name,
+            COUNT(*) AS value
+          FROM imdb.DimTitle dt
+          JOIN imdb.DimGenre dg ON SUBSTRING(dt.genre, dg.genre_key, 1) = 'T'
+          WHERE dt.title_type = 'movie'
+          GROUP BY dg.genre_name
+        )
+        SELECT genre_name AS name, value
+        FROM MovieGenres
+        ORDER BY value DESC
+        LIMIT 10;
     `);
     console.log("Genre distribution result:", genreDistribution.length);
 
-    // ===== 2. OPTIMIZED RATINGS TREND BY YEAR =====
+    // ===== 2. OPTIMIZED RATINGS TREND BY YEAR - WITH CTE =====
     console.log("\n📈 Fetching ratings trend...");
     
     const ratingsTrend = await query<{ year: number; avgRating: number; count: number }>(`
+      WITH FilteredTitles AS (
+        SELECT title_key, release_year
+        FROM DimTitle
+        WHERE title_type = 'movie'
+          AND release_year BETWEEN 2015 AND 2024
+      )
       SELECT 
-        dt.release_year AS year,
+        ft.release_year AS year,
         AVG(fr.avg_rating) AS avgRating,
         COUNT(DISTINCT fr.title_key) AS count
-      FROM FactRatings fr
-      JOIN DimTitle dt USING (title_key)
-      WHERE dt.title_type = 'movie'
-        AND dt.release_year BETWEEN 2015 AND 2024
-        AND fr.avg_rating IS NOT NULL
-      GROUP BY dt.release_year
-      ORDER BY dt.release_year
+      FROM FilteredTitles ft
+      JOIN FactRatings fr ON fr.title_key = ft.title_key
+      WHERE fr.avg_rating IS NOT NULL
+      GROUP BY ft.release_year
+      ORDER BY ft.release_year ASC
     `);
     console.log("Ratings trend result:", ratingsTrend.length);
 
-    // ===== 3. OPTIMIZED TOP RATED MOVIES =====
+    // ===== 3. OPTIMIZED TOP RATED MOVIES - EXACT VERSION =====
     console.log("\n🏆 Fetching top rated movies...");
     
     const topRatedMovies = await query<{ title: string; rating: number; votes: number }>(`
       SELECT 
-        dt.primary_title AS title, 
-        fr.avg_rating AS rating, 
+        dt.primary_title AS title,
+        fr.avg_rating AS rating,
         fr.num_votes AS votes
       FROM FactRatings fr
       JOIN DimTitle dt USING (title_key)
       WHERE dt.title_type = 'movie'
-        AND fr.num_votes >= 1000
-        AND fr.avg_rating IS NOT NULL
+        AND fr.num_votes >= 100
       ORDER BY fr.avg_rating DESC, fr.num_votes DESC
       LIMIT 5
     `);
@@ -107,26 +113,32 @@ export async function GET(request: Request) {
     `);
     console.log("Awards by category result:", awardsByCategory.length);
 
-      // ===== 5. SIMPLIFIED POPULAR ACTORS (FOR TESTING) =====
+    // ===== 5. OPTIMIZED POPULAR ACTORS - WITH CTE =====
     console.log("\n⭐ Fetching popular actors...");
     
     const popularActors = await query<{ name: string; movieCount: number; avgRating: number }>(`
+      WITH ActorMovies AS (
+        SELECT 
+          bc.person_key,
+          COUNT(DISTINCT bc.title_key) AS movie_count,
+          AVG(fr.avg_rating) AS avg_rating
+        FROM BridgeCrew bc
+        JOIN FactRatings fr ON bc.title_key = fr.title_key
+        WHERE bc.category IN ('actor', 'actress')
+          AND fr.avg_rating IS NOT NULL
+        GROUP BY bc.person_key
+      )
       SELECT 
-        dp.full_name as name,
-        COUNT(DISTINCT bc.title_key) as movieCount,
-        AVG(fr.avg_rating) as avgRating
-      FROM BridgeCrew bc
-      INNER JOIN DimPerson dp ON bc.person_key = dp.person_key
-      INNER JOIN FactRatings fr ON bc.title_key = fr.title_key
-      WHERE bc.category IN ('actor', 'actress')
-        AND fr.avg_rating IS NOT NULL
-      GROUP BY dp.person_key, dp.full_name
-      HAVING movieCount >= 1
-      ORDER BY movieCount DESC, avgRating DESC
+        dp.full_name AS name,
+        am.movie_count AS movieCount,
+        am.avg_rating AS avgRating
+      FROM ActorMovies am
+      JOIN DimPerson dp ON dp.person_key = am.person_key
+      WHERE am.movie_count >= 1
+      ORDER BY am.movie_count DESC, am.avg_rating DESC
       LIMIT 10
     `);
     console.log("Popular actors result:", popularActors.length);
-    console.log("Sample data:", popularActors.slice(0, 2));
 
     // ===== 6. OPTIMIZED SUCCESSFUL CREW MEMBERS =====
     console.log("\n🎬 Fetching successful crew members...");
@@ -165,23 +177,32 @@ export async function GET(request: Request) {
     );
     console.log("Successful crew members result:", successfulCrewMembers.length);
 
-    // ===== 7. SIMPLIFIED BEST FILM GENRE (FOR TESTING) =====
+    // ===== 7. OPTIMIZED BEST FILM GENRE - WITH CTE =====
     console.log("\n🎭 Fetching best film genre...");
     
     const bestFilmGenre = await query<any>(`
+      WITH RecentMovies AS (
+        SELECT 
+          dg.genre_name as genre,
+          dg.genre_key,
+          fr.avg_rating,
+          dt.release_year
+        FROM DimGenre dg
+        JOIN DimTitle dt ON SUBSTRING(dt.genre, dg.genre_key, 1) = 'T'
+        JOIN FactRatings fr ON dt.title_key = fr.title_key
+        WHERE dt.release_year >= YEAR(CURDATE()) - 10
+          AND dt.title_type = 'movie'
+          AND dt.genre IS NOT NULL
+          AND fr.avg_rating IS NOT NULL
+      )
       SELECT 
-        dg.genre_name as genre,
-        AVG(fr.avg_rating) as avgRating,
-        COUNT(DISTINCT dt.title_key) as count,
-        SUM(CASE WHEN fr.avg_rating >= 7.0 THEN 1 ELSE 0 END) as highRated
-      FROM DimGenre dg
-      JOIN DimTitle dt ON SUBSTRING(dt.genre, dg.genre_key, 1) = 'T'
-      INNER JOIN FactRatings fr ON dt.title_key = fr.title_key
-      WHERE dt.title_type = 'movie'
-        AND dt.genre IS NOT NULL
-        AND fr.avg_rating IS NOT NULL
-      GROUP BY dg.genre_name, dg.genre_key
-      HAVING count >= 5
+        genre,
+        AVG(avg_rating) AS avgRating,
+        COUNT(DISTINCT release_year) AS count,
+        SUM(CASE WHEN avg_rating >= 7.0 THEN 1 ELSE 0 END) AS highRated
+      FROM RecentMovies
+      GROUP BY genre
+      HAVING count >= 1
       ORDER BY avgRating DESC
       LIMIT 10
     `).then(results =>
@@ -193,7 +214,6 @@ export async function GET(request: Request) {
       }))
     );
     console.log("Best film genre result:", bestFilmGenre.length);
-    console.log("Sample data:", bestFilmGenre.slice(0, 2)); 
     
     // ===== 8. OPTIMIZED RATIO OF ACTOR PROFESSIONS =====
     console.log("\n👥 Fetching ratio of actor professions...");
@@ -225,24 +245,33 @@ export async function GET(request: Request) {
     }));
     console.log("Ratio of actor professions result:", ratioActorProfession.length);
 
-    // ===== 9. OPTIMIZED POPULARITY OF ACTORS PER GENRE =====
+    // ===== 9. OPTIMIZED POPULARITY OF ACTORS PER GENRE - WITH CTE =====
     console.log("\n🌟 Fetching popularity of actors per genre...");
     
     const popularityActorGenre = await query<{ genre: string; actorCount: number; avgRating: number }>(`
+      WITH GenreActor AS (
+        SELECT 
+          dt.title_key,
+          dg.genre_name,
+          dg.genre_key,
+          bc.person_key,
+          fr.avg_rating
+        FROM FactRatings fr
+        JOIN BridgeCrew bc ON fr.title_key = bc.title_key
+        JOIN DimTitle dt ON dt.title_key = fr.title_key
+        JOIN DimGenre dg ON SUBSTRING(dt.genre, dg.genre_key, 1) = 'T'
+        WHERE bc.category IN ('actor', 'actress')
+          AND dt.title_type = 'movie'
+          AND dt.genre IS NOT NULL
+          AND fr.avg_rating IS NOT NULL
+      )
       SELECT 
-        dg.genre_name as genre,
-        COUNT(DISTINCT bc.person_key) as actorCount,
-        AVG(fr.avg_rating) as avgRating
-      FROM DimGenre dg
-      JOIN DimTitle dt ON SUBSTRING(dt.genre, dg.genre_key, 1) = 'T'
-      INNER JOIN BridgeCrew bc ON bc.title_key = dt.title_key
-      INNER JOIN FactRatings fr ON dt.title_key = fr.title_key
-      WHERE bc.category IN ('actor', 'actress')
-        AND dt.title_type = 'movie'
-        AND dt.genre IS NOT NULL
-        AND fr.avg_rating IS NOT NULL
-      GROUP BY dg.genre_name, dg.genre_key
-      HAVING actorCount >= 5
+        genre_name AS genre,
+        COUNT(DISTINCT person_key) AS actorCount,
+        AVG(avg_rating) AS avgRating
+      FROM GenreActor
+      GROUP BY genre_name, genre_key
+      HAVING actorCount >= 1
       ORDER BY actorCount DESC
       LIMIT 10
     `);
@@ -250,19 +279,22 @@ export async function GET(request: Request) {
 
     // ===== OPTIMIZED STATISTICAL TESTS =====
 
-    // 1. CORRELATION: Ratings vs Votes (Pearson)
+    // 1. CORRELATION: Ratings vs Votes (Pearson) - WITH CTE
     console.log("\n📊 Calculating Pearson correlation...");
     const correlationData = await query<{ rating: number; votes: number; title: string }>(`
-      SELECT 
-        dt.primary_title as title,
-        fr.avg_rating as rating,
-        fr.num_votes as votes
-      FROM FactRatings fr
-      JOIN DimTitle dt USING (title_key)
-      WHERE dt.title_type = 'movie'
-        AND fr.num_votes >= 100
-        AND fr.avg_rating IS NOT NULL
-      ORDER BY fr.num_votes DESC
+      WITH MovieRatings AS (
+        SELECT 
+          dt.primary_title AS title,
+          fr.avg_rating AS rating,
+          fr.num_votes AS votes
+        FROM DimTitle dt
+        JOIN FactRatings fr ON dt.title_key = fr.title_key
+        WHERE dt.title_type = 'movie'
+          AND fr.num_votes >= 100
+        LIMIT 1000
+      )
+      SELECT * FROM MovieRatings
+      ORDER BY votes DESC
       LIMIT 500
     `);
 
@@ -284,20 +316,23 @@ export async function GET(request: Request) {
     }
     console.log("Pearson correlation:", pearsonR.toFixed(4));
 
-    // 2. OPTIMIZED CHI-SQUARE TEST
+    // 2. OPTIMIZED CHI-SQUARE TEST - WITH CTE
     console.log("\n🧪 Running chi-square test...");
     const chiSquareTest = await query<any>(`
-      SELECT 
-        dg.genre_name as genre,
-        SUM(CASE WHEN foa.is_winner = 1 THEN 1 ELSE 0 END) as awardWinners,
-        SUM(CASE WHEN foa.is_winner = 0 THEN 1 ELSE 0 END) as nonWinners,
-        COUNT(*) as total
-      FROM DimGenre dg
-      JOIN DimTitle dt ON SUBSTRING(dt.genre, dg.genre_key, 1) = 'T'
-      INNER JOIN FactOscarAwards foa ON foa.title_key = dt.title_key
-      WHERE dt.genre IS NOT NULL
-      GROUP BY dg.genre_name, dg.genre_key
-      HAVING total >= 5
+      WITH GenreAwards AS (
+        SELECT 
+          dg.genre_name as genre,
+          SUM(CASE WHEN foa.is_winner = 1 THEN 1 ELSE 0 END) AS awardWinners,
+          SUM(CASE WHEN foa.is_winner = 0 THEN 1 ELSE 0 END) AS nonWinners,
+          COUNT(*) AS total
+        FROM FactOscarAwards foa
+        JOIN DimTitle dt ON foa.title_key = dt.title_key
+        JOIN DimGenre dg ON SUBSTRING(dt.genre, dg.genre_key, 1) = 'T'
+        WHERE dt.genre IS NOT NULL
+        GROUP BY dg.genre_name, dg.genre_key
+      )
+      SELECT * FROM GenreAwards
+      WHERE total >= 1
       ORDER BY total DESC
       LIMIT 10
     `).then(results => {
@@ -331,48 +366,34 @@ export async function GET(request: Request) {
     });
     console.log("Chi-square test results:", chiSquareTest.length);
 
-    // 3. OPTIMIZED HYPOTHESIS TESTING - WITH DEBUG
+    // 3. OPTIMIZED HYPOTHESIS TESTING - WITH CTE
     console.log("\n🧪 Running hypothesis testing...");
     
-    // First, test the basic query without aggregation
-    const testGenreJoin = await query<any>(`
-      SELECT COUNT(*) as total
-      FROM DimGenre dg
-      JOIN DimTitle dt ON SUBSTRING(dt.genre, dg.genre_key, 1) = 'T'
-      INNER JOIN FactRatings fr ON dt.title_key = fr.title_key
-      WHERE dt.title_type = 'movie'
-        AND dt.genre IS NOT NULL
-        AND fr.avg_rating IS NOT NULL
-    `);
-    console.log("Test genre join total records:", testGenreJoin[0]?.total);
-
-    // Now try the actual query
     const hypothesisTesting = await query<any>(`
-      SELECT 
-        dg.genre_name as genre,
-        AVG(fr.avg_rating) as avgRating,
-        COUNT(DISTINCT dt.title_key) as sampleSize,
-        STDDEV(fr.avg_rating) as stdDev
-      FROM DimGenre dg
-      JOIN DimTitle dt ON SUBSTRING(dt.genre, dg.genre_key, 1) = 'T'
-      INNER JOIN FactRatings fr ON dt.title_key = fr.title_key
-      WHERE dt.title_type = 'movie'
-        AND dt.genre IS NOT NULL
-        AND fr.avg_rating IS NOT NULL
-      GROUP BY dg.genre_name, dg.genre_key
+      WITH GenreRatings AS (
+        SELECT 
+          dg.genre_name as genre,
+          AVG(fr.avg_rating) AS avgRating,
+          COUNT(DISTINCT dt.title_key) AS sampleSize,
+          STDDEV_SAMP(fr.avg_rating) AS stdDev
+        FROM DimTitle dt
+        JOIN DimGenre dg ON SUBSTRING(dt.genre, dg.genre_key, 1) = 'T'
+        JOIN FactRatings fr ON dt.title_key = fr.title_key
+        WHERE dt.release_year >= YEAR(CURDATE()) - 10
+          AND dt.title_type = 'movie'
+          AND dt.genre IS NOT NULL
+          AND fr.avg_rating IS NOT NULL
+        GROUP BY dg.genre_name, dg.genre_key
+      )
+      SELECT * FROM GenreRatings
       ORDER BY avgRating DESC
       LIMIT 10
     `).then(results => {
       console.log("Raw hypothesis testing results:", results.length);
-      console.log("Sample raw data:", results.slice(0, 2));
       
       if (results.length === 0) return [];
       
-      // Filter after getting results
-      const filtered = results.filter(r => parseInt(r.sampleSize) >= 10);
-      console.log("After filtering (sampleSize >= 10):", filtered.length);
-      
-      return filtered.map(r => {
+      return results.map(r => {
         const genreAvg = parseFloat(r.avgRating);
         const n = parseInt(r.sampleSize);
         const stdDev = parseFloat(r.stdDev) || 1;
@@ -392,9 +413,6 @@ export async function GET(request: Request) {
       });
     });
     console.log("Hypothesis testing results:", hypothesisTesting.length);
-    if (hypothesisTesting.length > 0) {
-      console.log("Sample result:", hypothesisTesting[0]);
-    }
 
     // ===== OPTIMIZED ACTOR ANALYTICS =====
 
