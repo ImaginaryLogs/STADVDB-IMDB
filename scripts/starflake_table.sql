@@ -80,6 +80,7 @@ CREATE TABLE FactRatings (
 	episode_key VARCHAR(16),
 	avg_rating FLOAT,
 	num_votes INT,
+	success_score FLOAT GENERATED ALWAYS AS (avg_rating * LOG(1 + num_votes)) STORED,
 	FOREIGN KEY (title_key) REFERENCES DimTitle(title_key),
 	FOREIGN KEY (episode_key) REFERENCES DimEpisode(episode_key)
 )ENGINE=InnoDB;
