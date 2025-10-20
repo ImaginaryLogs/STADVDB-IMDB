@@ -101,7 +101,7 @@ export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
 
   // New state variables for actor search
-  const [actorNameInput, setActorNameInput] = useState("Bryan Cranston");
+  const [actorNameInput, setActorNameInput] = useState("");
   const [actorGenreInput, setActorGenreInput] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
 
@@ -699,7 +699,7 @@ export default function Dashboard() {
                         <YAxis yAxisId="right" orientation="right" tick={{ fill: '#6b7280' }} label={{ value: 'Avg Rating', angle: 90, position: 'insideRight' }} />
                         <Tooltip 
                           contentStyle={{ 
-                            backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+                            backgroundColor: '#808080', 
                             border: 'none', 
                             borderRadius: '12px',
                             boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
