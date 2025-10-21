@@ -1,6 +1,6 @@
 // app/api/hello/route.ts
 import { getPool } from '@/lib/db';
-import { RATING_VOTES_CORRELATION_QUERY } from '@/lib/queries';
+import { RATING_VOTES_CORRELATION_QUERY } from '@/lib/db-queries';
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {

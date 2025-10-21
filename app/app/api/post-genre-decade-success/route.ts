@@ -1,6 +1,6 @@
 // app/api/hello/route.ts
 import { getPool } from '@/lib/db'
-import { POPULAR_GENRES_QUERY, SUCCESS_GENRE_DECADE_QUERY, SuccessGenreDecade, SuccessGenreDecadeQueryInput } from '@/lib/queries';
+import { POPULAR_GENRES_QUERY, SUCCESS_GENRE_DECADE_QUERY, SuccessGenreDecade, SuccessGenreDecadeQueryInput } from '@/lib/db-queries';
 import { QueryResult } from 'mysql2';
 import { NextResponse } from 'next/server'
 

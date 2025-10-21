@@ -1,6 +1,6 @@
 // app/api/hello/route.ts
 import { getPool } from '@/lib/db'
-import { RATIO_PROFESSIONS_CREW_MEMBER_QUERY } from '@/lib/queries'
+import { RATIO_PROFESSIONS_CREW_MEMBER_QUERY } from '@/lib/db-queries'
 import { NextResponse } from 'next/server'
 
 // Handle GET requests

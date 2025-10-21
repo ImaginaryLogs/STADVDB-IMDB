@@ -7,7 +7,7 @@ import {
   RatioProfessionsCrewMember,
   SuccessGenreDecade,
   TopOscarByCategory,
-} from "@/lib/queries";
+} from "@/lib/db-queries";
 import { useState, useEffect } from "react";
 import {
   BarChart,

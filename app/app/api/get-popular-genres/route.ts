@@ -1,6 +1,6 @@
 // app/api/hello/route.ts
 import { getPool } from '@/lib/db';
-import { POPULAR_GENRES_QUERY } from '@/lib/queries';
+import { POPULAR_GENRES_QUERY } from '@/lib/db-queries';
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {

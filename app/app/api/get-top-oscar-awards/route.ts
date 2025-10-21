@@ -1,6 +1,6 @@
 // app/api/hello/route.ts
 import { getPool } from '@/lib/db';
-import { TOP_OSCAR_BY_CATEGORY_QUERY } from '@/lib/queries';
+import { TOP_OSCAR_BY_CATEGORY_QUERY } from '@/lib/db-queries';
 import { NextResponse } from 'next/server'
 
 // Handle GET requests

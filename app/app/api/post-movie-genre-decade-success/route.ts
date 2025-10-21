@@ -1,6 +1,6 @@
 // app/api/hello/route.ts
 import { getPool } from '@/lib/db';
-import { SUCCESS_MOVIE_GENRE_DECADE_QUERY, SuccessMovieGenreDecadeQueryInput } from '@/lib/queries';
+import { SUCCESS_MOVIE_GENRE_DECADE_QUERY, SuccessMovieGenreDecadeQueryInput } from '@/lib/db-queries';
 import { NextResponse } from 'next/server'
 
 
