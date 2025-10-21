@@ -10,21 +10,26 @@ export async function POST(request: Request) {
         const body = await request.json();
         const [genres] = await pool.query<Genre[]>(GENRE_LIST_QUERY);
         console.log(genres)
-        let genreohc = ""
+        let genreohc = []
+
         let genresList: Genre[] = genres;
-        for (let i = 0; i > genresList.length; i++) {
-            if (genresList[i] == body.genre) {
-                genreohc += 'T'
-            } else {
-                genreohc += 'F'
-            }
+        for (let i = 0; i < genresList.length; i++) {
+            genreohc.push('F')
         }
-        console.log("OHC:" + genreohc)
+        for (let currGenres of genresList) {
+            console.log(currGenres)
+            if (currGenres.genre_name == body.genre) {
+                genreohc[currGenres.genre_key] = 'T'
+            };
+        }
+        let movies = genreohc.join("");
+        console.log("OHC:" + movies)
         const [rows] = await pool.query(SUCCESS_MOVIE_GENRE_DECADE_QUERY, [
-            genreohc,
-            body.range_before,
-            body.range_after,
+            movies,
+            parseInt(body.range_before),
+            parseInt(body.range_after),
         ]);
+        console.log(rows)
         return NextResponse.json(rows, { status: 200 });
     } catch (error: any) {
         console.log(error)
