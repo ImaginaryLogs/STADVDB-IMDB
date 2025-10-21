@@ -240,17 +240,18 @@ Based on this metric.
 
 \begin{lstlisting}[style=SQLStyle]
 WITH PersonInfo AS (
-    SELECT person_key
-    FROM DimPerson
-    WHERE full_name = $1 -- 'Robert Downey Jr.' for example 
+SELECT person_key
+FROM DimPerson
+WHERE full_name = 'Robert Downey Jr.'  
 )
 SELECT
-    fcp.title_key AS title_key,
-    fcp.avg_rating AS avg_rating,
-    fcp.num_votes AS num_votes,
-    fcp.success_score AS success_score
+DISTINCT fcp.title_key AS title_key,
+fcp.avg_rating AS avg_rating,
+fcp.num_votes AS num_votes,
+fcp.success_score AS success_score
 FROM FactCrewPerformancePerFilmGenre fcp
-JOIN PersonInfo pi ON pi.person_key = fcp.person_key;
+JOIN PersonInfo pi ON pi.person_key = fcp.person_key
+ORDER BY success_score DESC;
 \end{lstlisting}
 
 This operation is a Roll-up, for it groups the data.
@@ -260,16 +261,16 @@ This operation is a Roll-up, for it groups the data.
 \hline
 title key & avg rating & num votes & success score \\
 \hline
-tt0488918 & 5.5 & 34 & 19.5544 \\
-tt0488918 & 5.5 & 34 & 19.5544 \\
+tt14404618 & 6.8 & 9046 & 61.9493 \\
+tt3473134 & 8.4 & 343 & 49.0614 \\
+tt8421554 & 7.8 & 488 & 48.3004 \\
+tt20297790 & 6.3 & 437 & 38.318 \\
 tt0390776 & 6.5 & 209 & 34.7562 \\
-tt0390776 & 6.5 & 209 & 34.7562 \\
-tt0390776 & 6.5 & 209 & 34.7562 \\
-tt0390776 & 6.5 & 209 & 34.7562 \\
-tt0390776 & 6.5 & 209 & 34.7562 \\
-tt0390776 & 6.5 & 209 & 34.7562 \\ 
-tt0390776 & 6.5 & 209 & 34.7562 \\ 
-tt0390776 & 6.5 & 209 & 34.7562 \\
+tt1618221 & 5.6 & 86 & 25.0091 \\
+tt0827928 & 8.4 & 17 & 24.2791 \\
+tt2354581 & 7.8 & 18 & 22.9666 \\
+tt32159454 & 6.3 & 29 & 21.4275 \\
+tt10334498 & 5.0 & 70 & 21.3134 \\
 \hline
 \end{tabular}
 \end{center}

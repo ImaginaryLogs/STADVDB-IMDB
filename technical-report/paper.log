@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2026/dev/Arch Linux) (preloaded format=pdflatex 2025.9.26)  21 OCT 2025 16:51
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2026/dev/Arch Linux) (preloaded format=pdflatex 2025.9.26)  21 OCT 2025 17:13
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1216,22 +1216,22 @@ Underfull \hbox (badness 7308) in paragraph at lines 224--224
 
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 346--346
-[]|\T1/LinuxLibertineT-TLF/m/n/9 (+20) SCIENTIFIC AND TECH-NI-CAL
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 346--346
-\T1/LinuxLibertineT-TLF/m/n/9 (+20) AWARD (Tech-ni-cal Achieve-ment
- []
-
-
 Underfull \hbox (badness 10000) in paragraph at lines 347--347
 []|\T1/LinuxLibertineT-TLF/m/n/9 (+20) SCIENTIFIC AND TECH-NI-CAL
  []
 
 
-Underfull \hbox (badness 1184) in paragraph at lines 347--347
+Underfull \hbox (badness 10000) in paragraph at lines 347--347
+\T1/LinuxLibertineT-TLF/m/n/9 (+20) AWARD (Tech-ni-cal Achieve-ment
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 348--348
+[]|\T1/LinuxLibertineT-TLF/m/n/9 (+20) SCIENTIFIC AND TECH-NI-CAL
+ []
+
+
+Underfull \hbox (badness 1184) in paragraph at lines 348--348
 \T1/LinuxLibertineT-TLF/m/n/9 (+20) AWARD (Sci-en-tific and En-gi-neer-ing
  []
 
@@ -1241,14 +1241,14 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 
 
 [4.4]
-Underfull \hbox (badness 10000) in paragraph at lines 364--366
+Underfull \hbox (badness 10000) in paragraph at lines 365--367
 
  []
 
 
 
 LaTeX Font Info:    Font shape `T1/zi4/m/n' will be
-(Font)              scaled to size 9.0pt on input line 464.
+(Font)              scaled to size 9.0pt on input line 465.
 
 
 [5.5]
@@ -1274,7 +1274,7 @@ Class acmart Warning: CCS concepts are mandatory for papers over two pages.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `subscript' on input line 544.
+(hyperref)                removing `subscript' on input line 545.
 
 (/usr/share/texmf-dist/tex/generic/stringenc/se-pdfdoc.def
 File: se-pdfdoc.def 2019/11/29 v1.12 stringenc: PDFDocEncoding
@@ -1294,9 +1294,9 @@ Package rerunfilecheck Info: File `paper.out' has not changed.
 (rerunfilecheck)             Checksum: F6327428222F10ED4F8B78F5B0CBE064;3585.
  ) 
 Here is how much of TeX's memory you used:
- 23847 strings out of 475171
- 377151 string characters out of 5767095
- 1098508 words of memory out of 5000000
+ 23848 strings out of 475171
+ 377166 string characters out of 5767095
+ 1099509 words of memory out of 5000000
  45769 multiletter control sequences out of 15000+600000
  714198 words of font info for 323 fonts, out of 8000000 for 9000
  175 hyphenation exceptions out of 8191
@@ -1310,10 +1310,10 @@ e1/public/libertine/LinBiolinumTI.pfb></usr/share/texmf-dist/fonts/type1/public
 e/LinLibertineTB.pfb></usr/share/texmf-dist/fonts/type1/public/libertine/LinLib
 ertineTI.pfb></usr/share/texmf-dist/fonts/type1/public/newtx/txmiaX.pfb></usr/s
 hare/texmf-dist/fonts/type1/public/newtx/txsys.pfb>
-Output written on paper.pdf (6 pages, 649825 bytes).
+Output written on paper.pdf (6 pages, 649916 bytes).
 PDF statistics:
- 360 PDF objects out of 1000 (max. 8388607)
- 319 compressed objects within 4 object streams
- 156 named destinations out of 1000 (max. 500000)
+ 362 PDF objects out of 1000 (max. 8388607)
+ 321 compressed objects within 4 object streams
+ 157 named destinations out of 1000 (max. 500000)
  75467 words of extra memory for PDF output out of 89155 (max. 10000000)
 

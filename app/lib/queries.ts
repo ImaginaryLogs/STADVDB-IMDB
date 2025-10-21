@@ -47,19 +47,21 @@ export type PopularGenres = {
     total_titles: number
 }
 // in
+
 export const POPULAR_MOVIES_QUERY = `
 WITH PersonInfo AS (
     SELECT person_key
     FROM DimPerson
-    WHERE full_name = ?
+    WHERE full_name = ?  
 )
 SELECT
-    fcp.title_key AS title_key,
+    DISTINCT fcp.title_key AS title_key,
     fcp.avg_rating AS avg_rating,
     fcp.num_votes AS num_votes,
     fcp.success_score AS success_score
 FROM FactCrewPerformancePerFilmGenre fcp
-JOIN PersonInfo pi ON pi.person_key = fcp.person_key;
+JOIN PersonInfo pi ON pi.person_key = fcp.person_key
+ORDER BY success_score DESC;
 `
 
 export type PopularMovies = {
