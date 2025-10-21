@@ -195,9 +195,10 @@ FROM RatingsDifference;
 
 export const RATING_VOTES_SCATTER_QUERY = `
 SELECT 
+DISTINCT title_key as title,
 avg_rating AS rating,
 num_votes AS votes
-FROM FactRatings
+FROM imdb.FactRatings
 WHERE avg_rating IS NOT NULL
 AND num_votes IS NOT NULL
 ORDER BY num_votes DESC
