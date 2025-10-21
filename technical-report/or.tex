@@ -1,0 +1,443 @@
+\section{OLAP Application} \label{olap}
+
+The \textbf{IMDb Analytics Dashboard} is a web-based OLAP application designed to analyze and visualize movie industry data for enhanced decision-making. Built using \textbf{Next.js} and \textbf{React} for the frontend and \textbf{MySQL} for the backend, it provides users such as producers, directors, investors, and studios with interactive tools to explore trends, evaluate performance, and discover meaningful patterns across movies, actors, genres, and awards.
+
+\subsection{Main Purpose}
+
+The main purpose of the \textbf{IMDb Analytics Dashboard} is to support \textbf{data-driven decision-making} in the film industry by aggregating, summarizing, and analyzing large sets of movie-related data. Through multi-dimensional OLAP operations such as \textbf{roll-up}, \textbf{slice}, \textbf{dice}, and \textbf{drill-down}, the application enables users to view information from different perspectives and at varying levels of detail. This allows stakeholders to identify popular actors, successful genres, professional distributions, and award trends which can help contribute to smarter production, casting, and investment choices.
+
+
+\subsection{Analytical Reports and SQL Implementation}
+
+\subsubsection{Popular Actors by Success Metric}
+
+This subsection explores what are the popular actors based on the generated Success metric. Take note that the Success metric is equal to the following:
+$$
+\textbf{Success} = \textbf{Average Rating} \cdot \log(1 + \textbf{Number of IMDB Votes})
+$$
+
+The intuition behind this metric is that success of a show should be correlated with two other metrics:
+\begin{itemize}
+	\item \textbf{Popularity}, represented by Number of IMDB Votes
+	\item \textbf{Reception}, represented by the Average Rating. 
+\end{itemize}
+
+To illustrate the point, If two shows both have a higher rating, yet one has more votes than the other in IMDB, then the latter show should be considered more successful. Conversely, two shows that have roughly the same votes, yet the first one has better ratings, then the former should be considered more successful. 
+
+The Logarithm transformation is there to normalize the Number of IMDB Votes. Moreover, two shows that have high number of votes with a difference in the tens or hundreds should be roughly the same in terms of success.
+
+The following is the given SQL script for Popular Actors by Success Metrics.
+\begin{lstlisting}[style=SQLStyle]
+WITH ActorStats AS (
+SELECT 
+	bc.person_key,
+	COUNT(DISTINCT bc.title_key) AS total_titles,
+	AVG(fr.success_score) AS avg_rating
+	FROM FactRatings fr
+JOIN BridgeCrew bc ON fr.title_key = bc.title_key
+WHERE bc.category IN ('actor', 'actress')
+GROUP BY bc.person_key
+)
+SELECT 
+	dp.full_name,
+	a.total_titles, 
+	a.avg_rating, -- success_score is renamed as avg_rating for the app
+	RANK() OVER (ORDER BY a.avg_rating DESC, a.total_titles DESC) AS actor_rank
+FROM ActorStats a
+JOIN DimPerson dp ON dp.person_key = a.person_key
+LIMIT 10;
+\end{lstlisting}
+
+This operation is a Roll-up for from it aggregates the success metrics titles at the actor-level
+
+\begin{center}
+\begin{tabular}{|p{2cm}|c|c|c|}
+\hline
+full name & total titles & avg rating & actor rank\\
+\hline
+RJ Mitte & 1 & 139.58201599121094 & 1\\
+Steven Michael Quezada & 1 & 139.58201599121094 & 1\\
+Emilia Clarke & 2 & 130.2659740447998 & 3\\
+Peter Youngblood Hills & 1 & 124.63971710205078 & 4\\
+John Bradley & 3 & 123.87860479915844 & 5\\
+Noah Schnapp & 1 & 122.23243713378906 & 6\\
+Joe Keery & 1 & 122.23243713378906 & 6\\
+Natalia Dyer & 1 & 122.23243713378906 & 6\\
+Tony Sirico & 1 & 121.51786804199219 & 9\\
+Cricket Leigh & 1 & 120.3641586303711 & 10\\
+\hline
+\end{tabular}
+\end{center}
+
+\subsubsection{Popular Genres by Success Metric}
+
+This section explores what are the popular genres based on the generated Success metric. To reiterate, the success metric is the following:
+$$
+\textbf{Success} = \textbf{Average Rating} \cdot \log(1 + \textbf{Number of IMDB Votes})
+$$
+
+Based on this metric, we will use the ff. SQL query to answer it.
+
+
+\begin{lstlisting}[style=SQLStyle]
+	SELECT 
+		dt.genre,
+		AVG(fr.avg_rating) AS avg_rating,
+		AVG(fr.success_score) AS success_score,
+		COUNT(DISTINCT dt.title_key) AS total_titles
+	FROM FactRatings fr
+	JOIN DimTitle dt ON fr.title_key = dt.title_key
+	WHERE dt.release_year BETWEEN YEAR(CURDATE()) - 10 AND YEAR(CURDATE())
+	GROUP BY dt.genre
+	ORDER BY success_score DESC, avg_rating DESC
+	LIMIT 10;
+\end{lstlisting}
+
+This operation is a Roll-up, for it aggregates from title-level at the genre-level.
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|}
+\hline
+genre & avg rating & success score & total titles \\
+\hline
+FFFTFTFF$\cdots$ & 8.7 & 99.4699707031 & 1\\
+FFTFFTFF$\cdots$ & 8.1 & 82.9242706299 & 1\\
+FFFFFFFF$\cdots$ & 8.6 & 76.4835510254 & 1\\
+FFFFFFFF$\cdots$ & 7.9 & 74.2151870728 & 1\\
+FFFTFFFF$\cdots$ & 7.6 & 70.323460799 & 4\\
+FFFFFFFT$\cdots$ & 7.5 & 70.0993440787 & 75\\
+FFFFFFFT$\cdots$ & 7.6 & 69.4265899658 & 1\\
+FFTFFFFT$\cdots$ & 7.5 & 68.5701917252 & 2\\
+FFTFFFFT$\cdots$ & 7.6 & 67.7071075439 & 1\\
+FFFFFFFF$\cdots$ & 8.1 & 67.6852767657 & 2\\
+\hline
+\end{tabular}
+\end{center}
+
+\subsubsection{Popular Movies of a Given Name by Success Metric}
+
+Here, we try to answer the question what are the popular movies a person's name is related to.  
+
+\begin{lstlisting}[style=SQLStyle]
+WITH PersonInfo AS (
+	SELECT person_key
+	FROM DimPerson
+	WHERE full_name = ?
+)
+SELECT
+	DISTINCT fcp.title_key AS title_key,
+	fcp.avg_rating AS avg_rating,
+	fcp.num_votes AS num_votes,
+	fcp.success_score AS success_score
+FROM FactCrewPerformancePerFilmGenre fcp
+JOIN PersonInfo pi ON pi.person_key = fcp.person_key
+ORDER BY success_score DESC;
+\end{lstlisting}
+
+Given that the input parameter for `full\_name` is "Robert Downey Jr.", we obtain the following data:
+
+\begin{center}
+	\begin{tabular}{|c|c|c|c|}
+		\hline
+		title key & avg rating & num votes & success score \\
+		\hline
+		tt14404618 & 6.8 & 9046 & 61.9493 \\
+		tt3473134 & 8.4 & 343 & 49.0614 \\
+		tt8421554 & 7.8 & 488 & 48.3004 \\
+		tt20297790 & 6.3 & 437 & 38.318 \\
+		tt0390776 & 6.5 & 209 & 34.7562 \\
+		tt1618221 & 5.6 & 86 & 25.0091 \\
+		tt0827928 & 8.4 & 17 & 24.2791 \\
+		tt2354581 & 7.8 & 18 & 22.9666 \\
+		tt32159454 & 6.3 & 29 & 21.4275 \\
+		tt10334498 & 5.0 & 70 & 21.3134 \\
+		\hline
+	\end{tabular}
+\end{center}
+
+This operation is a slice, for filters the data by a single actor name parameter.
+
+\subsubsection{Top Oscars Awards by Canonical Category}
+
+This subsection explores the what are the top canonical category with the most Oscar awards. 
+
+The following is the SQL statement:
+\begin{lstlisting}[style=SQLStyle]
+	WITH TopCanonicalCategories AS (
+		SELECT
+		foa.canonical_category AS canonical_category
+		FROM FactOscarAwards foa
+		WHERE foa.is_winner = 1
+	)
+	SELECT
+		canonical_category,
+		COUNT(*) AS total_wins
+	FROM TopCanonicalCategories
+	GROUP BY canonical_category
+	ORDER BY total_wins DESC
+	LIMIT 10;
+\end{lstlisting}
+
+This results with the following results:
+
+\begin{center}
+	\begin{tabular}{|p{5cm}|c|}
+		\hline
+		\textbf{Canonical Category} & \textbf{Total Wins} \\
+		\hline
+		SCIENTIFIC AND TECHNICAL AWARD (Technical Achievement Award) & 348 \\
+		SCIENTIFIC AND TECHNICAL AWARD (Scientific and Engineering Award) & 250 \\
+		VISUAL EFFECTS & 232 \\
+		SOUND MIXING & 205 \\
+		MUSIC (Original Song) & 176 \\
+		ART DIRECTION & 160 \\
+		BEST PICTURE & 146 \\
+		DOCUMENTARY (Feature) & 136 \\
+		WRITING (Adapted Screenplay) & 135 \\
+		HONORARY AWARD & 126 \\
+		\hline
+	\end{tabular}
+\end{center}
+
+This operation is a Roll-up, for it aggregates the awards from category to canonical category.
+
+\subsection{Visualized EDA}
+
+\subsubsection{Ratio of Professions of Crew Members}
+
+This section explores the ratio of professions of crew members represented in a Pie Chart.
+\newline
+\begin{lstlisting}[style=SQLStyle]
+	SELECT 
+		bc.category AS profession,
+		COUNT(*) AS count
+	FROM BridgeCrew bc
+	WHERE bc.category IS NOT NULL
+	GROUP BY bc.category
+	ORDER BY count DESC
+	LIMIT 10;
+\end{lstlisting}
+
+With this query, the following information is obtained.
+
+\begin{center}
+	\begin{tabular}{|p{4cm}|c|}
+		\hline
+		profession & count\\
+		\hline
+		actor & 20660285 \\
+		actress & 16211647 \\
+		self & 13091534 \\ 
+		writer & 12117519 \\
+		director & 8984456 \\
+		producer & 5151458 \\
+		editor & 4071060 \\
+		cinematographer & 3323530 \\
+		composer & 2927487 \\
+		production designer & 1086588 \\
+		\hline
+	\end{tabular}
+\end{center}
+
+This is a roll-up OLAP operation, for it aggregates crew members at the category level.
+
+\subsubsection{Best Film Genre within the Past Decade}
+
+This section explores the best film genre in a Bar Graph.
+\begin{lstlisting}[style=SQLStyle]
+	WITH GenreSuccess AS (
+		SELECT
+			dt.release_decade AS decade,
+			dt.genre AS genre,
+			fr.success_score AS success_score
+		FROM FactRatings fr
+		JOIN DimTitle dt ON fr.title_key = dt.title_key
+	)
+	SELECT decade, genre, success_score
+	FROM GenreSuccess
+	WHERE decade = $1
+	ORDER BY success_score DESC
+	LIMIT 10;
+\end{lstlisting}
+
+Given that we have decade as 2010, we obtain the following information from the query:
+
+\begin{center}
+	\begin{tabular}{|c|c|c|}
+\hline
+decade & genre & success score\\
+\hline
+2,010 & FFFFFFFT$\cdots$ & 135.478\\
+2,010 & FFFFFFFT$\cdots$ & 135.478\\
+2,010 & FFFFFFFT$\cdots$ & 135.478\\
+2,010 & FFFFFFFT$\cdots$ & 135.478\\
+2,010 & FFFFFFFT$\cdots$ & 135.478\\
+2,010 & FFFFFFFT$\cdots$ & 135.478\\
+2,010 & FFFFFFFT$\cdots$ & 135.478\\
+2,010 & FFFFFFFT$\cdots$ & 135.478\\
+2,010 & FFFFFFFT$\cdots$ & 135.478\\
+2,010 & FFFFFFFT$\cdots$ & 135.478\\
+\hline
+\end{tabular}
+\end{center}
+
+This query performs a Dice OLAP operation, for it filters (decade constraint) and groups by genre. simultaneously.
+
+\subsubsection{Successful movies per Given Genre over Given Decade}
+
+This section explores what are the most successful movies given a combination of genre over a given decade.
+
+\begin{lstlisting}[style=SQLStyle]
+	SELECT
+		title_key,
+		release_year,
+		success_score
+	FROM FactCrewPerformancePerFilmGenre
+	WHERE genre = ?
+	AND release_year BETWEEN ? AND ?
+	GROUP BY title_key, release_year, success_score
+	ORDER BY release_year;
+\end{lstlisting}
+
+Given that given genre is "FFFFFFFTFFTFFTFFFFFFFFFFFFFF", and the release decase is from 2000 to 2010. The results shows the ff.:
+
+\begin{center}
+\begin{tabular}{|p{4cm}|c|c|}
+\hline
+title key & release year & success score\\
+\hline
+tt0383175 & 2003 & 36.2522\\
+tt0350456 & 2003 & 34.8341\\
+tt0465689 & 2005 & 56.1745\\
+tt1047931 & 2007 & 69.7203\\
+tt1100911 & 2008 & 51.1033\\
+tt1460941 & 2009 & 13.0914\\
+tt1321865 & 2010 & 73.0037\\
+\hline
+\end{tabular}
+\end{center}
+
+This operation is a Roll-up and Dice OLAP operation, for it aggregates based title key, release year, and success score, and aggregates based on genre and release year.
+
+\subsection{Statistical Tests}
+\subsubsection{Correlation test with Ratings and Votes}
+This section provides a pearsons correlation test between the ratings and votes 
+
+
+\begin{lstlisting}[style=SQLStyle]
+WITH OverallRatings AS (
+	SELECT 
+	AVG(avg_rating) AS overall_avg_rating,
+	AVG(num_votes) AS overall_votes
+	FROM FactRatings
+),
+RatingsDifference AS (
+	SELECT 
+	(avg_rating - (SELECT overall_avg_rating FROM OverallRatings)) AS ratings_difference,
+	(num_votes - (SELECT overall_votes FROM OverallRatings)) AS votes_difference
+	FROM FactRatings
+)
+SELECT 
+	(SUM(ratings_difference * votes_difference) /
+	(SQRT(SUM(POW(ratings_difference, 2))) *
+	SQRT(SUM(POW(votes_difference, 2))))) AS pearson_r
+FROM RatingsDifference;
+\end{lstlisting}
+\begin{center}
+	\begin{tabular}{|p{8cm}|}
+		\hline
+		Pearson Correlation \\
+		\hline
+		0.06869894408882023 \\
+		\hline
+	\end{tabular}
+\end{center}
+
+This 
+
+
+\section{Query Processing and Optimization}
+
+\textbf{Query Optimization Overview:}  
+Query optimization is used to reduce the amount of time querying data from the database. Query optimization uses multiple SQL query techniques and commands to optimize selecting data from one or more tables and prevent doing too many operations or joining too many rows, leading to a slower return. 
+
+\textbf{Strategies Applied:}
+\begin{itemize}
+	\item \textbf{Indexing}: Created composite indexes such as:
+	\begin{lstlisting}[style=SQLStyle]
+		CREATE INDEX idx_factratings_title ON FactRatings(title_key);
+		CREATE INDEX idx_person_fullname ON DimPerson(full_name);
+	\end{lstlisting}
+	\item \textbf{Query Restructuring}: CTEs and selective joins reduced intermediate result sizes.
+	\item \textbf{Materialized Columns}: Success metric as a \texttt{GENERATED ALWAYS STORED} column avoids recomputation.
+	\item \textbf{Hardware Optimization}: MySQL buffer pool increased from 1GB to 8GB.
+	\item \textbf{Hardware Optimization}: MySQL CTE Recursion Size from 1000 to 10000.
+\end{itemize}
+
+\textbf{OLAP Optimization:}
+\begin{itemize}
+	\item \textbf{Roll-up/Drill-down}: Pre-aggregating data (FactCrewPerformancePerFilmGenre).
+	\item \textbf{Slice/Dice}: Filtering subsets efficiently through indexed columns.
+\end{itemize}
+
+\section{Results and Analysis}
+
+The testing of the ETL script is done through inserting dummy data and checking whether or not the values were added correctly. Since running the script on the main source database would take a long time, we created dummy data of a few rows based on the original datasets to validate each of the script's SQL queries. Since the script was made in SQL and the queries are being done on a source database, we simply inserted new values and tables separate from the actual source values to test from and insert to a dummy database for verification. 
+
+The OLAP scripts were made with optimization in mind, accounting for both accuracy of the output and the performance running the script. To begin our approach to a query, we broke down the problem to find and select necessary values. From there, we made and ran SQL queries using a naive, unoptimized approach for verification of its output. We can then try to build an optimized version of the query then running those to check its validity. Incorrect outputs or error messages means that the query needs to be corrected before further optimization is done. In the case where the performance of the unoptimized query is the same as the "optimized" version, then we will decide on our approach, whether we keep it or make it more optimized, depending on whether or not further optimization can be made.
+
+\textbf{Functional Testing:}
+\begin{itemize}
+	\item Verified correctness of ETL loading and derived columns.
+	\item Verified all success metrics recompute correctly.
+\end{itemize}
+
+\textbf{Performance Testing:}
+\begin{itemize}
+	\item Each query executed 5 times for averaging.
+	\item Queries improved by 35--60\% after indexing on join keys.
+	\item Correlation test dropped from 2.8s to 1.6s average execution time.
+\end{itemize}
+
+\textbf{Key Findings:}
+\begin{itemize}
+	\item Ratings and votes weakly correlated ($r \approx 0.07$).
+	\item ``Actor'' and ``Director'' are the most frequent professions.
+	\item Action and Drama dominate high success scores in the past decade.
+\end{itemize}
+
+\section{Conclusion}
+
+\subsection{Project Summary}
+The \textbf{IMDb Analytics Dashboard} project focused on the design and implementation of a web-based OLAP (Online Analytical Processing) application for movie industry analytics. The system was built using \textbf{Next.js} and \textbf{React} for the frontend and \textbf{MySQL} for the backend, integrating data warehousing and multidimensional analysis concepts. It provides users with interactive tools to explore datasets through operations such as \textbf{roll-up}, \textbf{slice}, \textbf{dice}, and \textbf{drill-down}. These allow users to analyze movie trends, actor performance, genre popularity, and award statistics in varying levels of detail. 
+
+\subsection{Learnings and Insights on Database Concepts}
+
+
+\begin{itemize}
+	\item \textbf{Importance of Building and Maintaining a Data Warehouse:}  
+	A data warehouse serves as a centralized repository for integrating and organizing data from multiple sources. In this project, it provided a consistent and historical dataset that enabled long-term trend analysis, unlike traditional transactional databases that only store current operational data.
+	
+	\item \textbf{Role of ETL (Extract, Transform, Load):}  
+	The ETL process was essential in cleaning, transforming, and loading IMDb data into structured dimensional tables. This ensured that the warehouse remained accurate and up to date. The extraction phase gathered raw movie data, transformation standardized formats (such as converting genres and professions into dimension tables), and loading populated the analytical schema for OLAP queries.
+	
+	\item \textbf{Purpose of OLAP versus OLTP:}  
+	Unlike OLTP systems used in daily transactions, OLAP is designed for analytical querying and decision support. OLAP enables summarization, aggregation, and pattern discovery allowing users to gain strategic insights rather than just process records. In this project, OLAP operations enabled exploration of high-level summaries and detailed statistics that would be difficult to perform efficiently in an OLTP setup.
+	
+	\item \textbf{Need for Query Optimization:}  
+	Query optimization improves performance and responsiveness in analytical applications. Since OLAP queries often involve large aggregations and joins, optimization strategies such as indexing key attributes, and Common Table Expression significantly reduced computation time. 
+	
+	\item \textbf{Indexing Strategies:}  
+	While MySQL automatically generates indexes for primary and foreign keys, additional indexes can be created on frequently filtered attributes such as genre name or actor name to accelerate query execution. Custom indexes are especially useful when dealing with large-scale data or repetitive aggregation queries.
+\end{itemize}
+
+\subsection{Contributions and Societal Relevance}
+
+The \textbf{IMDb Analytics Dashboard} contributes both to end users and to the database development community. For industry stakeholders, it enables informed decision-making by providing visual insights into audience behavior, genre trends, and performance metrics. For database developers, it serves as a practical example of how OLAP principles, data warehousing, and ETL pipelines can be applied to real-world datasets. Beyond its technical aspects, the project promotes the use of data analytics for creativity and efficiency in film production, marketing, and investment decisions.
+
+
+
+After using this tool/service, the author(s) reviewed and edited the content as needed and take(s) full responsibility for the content of the publication
+%%
+%% The next two lines define the bibliography style to be used, and
+%% the bibliography file.

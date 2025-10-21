@@ -2,23 +2,24 @@ import { RowDataPacket } from "mysql2"
 
 export const POPULAR_ACTORS_QUERY = `
 WITH ActorStats AS (
-  SELECT 
-    bc.person_key,
-    COUNT(DISTINCT bc.title_key) AS total_titles,
-    AVG(fr.avg_rating) AS avg_rating
-  FROM FactRatings fr
-  JOIN BridgeCrew bc ON fr.title_key = bc.title_key
-  WHERE bc.category IN ('actor', 'actress')
-  GROUP BY bc.person_key
+    SELECT 
+            bc.person_key,
+            COUNT(DISTINCT bc.title_key) AS total_titles,
+            AVG(fr.success_score) AS avg_rating
+        FROM FactRatings fr
+        JOIN BridgeCrew bc ON fr.title_key = bc.title_key
+        WHERE bc.category IN ('actor', 'actress')
+        GROUP BY bc.person_key
 )
 SELECT 
-  dp.full_name,
-  a.total_titles,
-  a.avg_rating,
-  RANK() OVER (ORDER BY a.avg_rating DESC, a.total_titles DESC) AS actor_rank
+    dp.full_name,
+    a.total_titles, 
+    a.avg_rating, -- success_score is renamed as avg_rating
+    RANK() OVER (ORDER BY a.avg_rating DESC, a.total_titles DESC) AS actor_rank
 FROM ActorStats a
 JOIN DimPerson dp ON dp.person_key = a.person_key
-LIMIT 10;`
+LIMIT 10;
+    `
 
 export type PopularActors = {
     full_name: string,
@@ -27,16 +28,17 @@ export type PopularActors = {
     actor_rank: number
 }
 
-export const POPULAR_GENRES_QUERY = `SELECT 
-  dt.genre,
-  AVG(fr.avg_rating) AS avg_rating,
-  AVG(fr.avg_rating * LOG(1 + fr.num_votes)) AS success_score,
-  COUNT(DISTINCT dt.title_key) AS total_titles
+export const POPULAR_GENRES_QUERY = `
+SELECT 
+dt.genre,
+AVG(fr.avg_rating) AS avg_rating,
+AVG(fr.success_score) AS success_score,
+COUNT(DISTINCT dt.title_key) AS total_titles
 FROM FactRatings fr
 JOIN DimTitle dt ON fr.title_key = dt.title_key
 WHERE dt.release_year BETWEEN YEAR(CURDATE()) - 10 AND YEAR(CURDATE())
 GROUP BY dt.genre
-ORDER BY success_score DESC
+ORDER BY success_score DESC, avg_rating DESC
 LIMIT 10;
 `
 
@@ -99,8 +101,8 @@ export type TopOscarByCategory = {
 
 export const RATIO_PROFESSIONS_CREW_MEMBER_QUERY = `
 SELECT 
-  bc.category AS profession,
-  COUNT(*) AS count
+bc.category AS profession,
+COUNT(*) AS count
 FROM BridgeCrew bc
 WHERE bc.category IS NOT NULL
 GROUP BY bc.category
@@ -118,7 +120,7 @@ export type RatioProfessionsCrewMember = {
 export const SUCCESS_GENRE_DECADE_QUERY = `
 WITH GenreSuccess AS (
     SELECT
-    	dt.title_key AS title,
+        dt.title_key AS title,
         dt.release_decade AS decade,
         dt.genre AS genre,
         fr.success_score AS success_score
@@ -128,7 +130,7 @@ WITH GenreSuccess AS (
 SELECT
     DISTINCT title,decade, genre, success_score
 FROM GenreSuccess
-WHERE decade = 1970
+WHERE decade = ?
 ORDER BY success_score DESC
 LIMIT 10;
 `
@@ -184,20 +186,20 @@ RatingsDifference AS (
     FROM FactRatings
 )
 SELECT 
-  (SUM(ratings_difference * votes_difference) /
-  (SQRT(SUM(POW(ratings_difference, 2))) *
-   SQRT(SUM(POW(votes_difference, 2))))) AS pearson_r
+(SUM(ratings_difference * votes_difference) /
+(SQRT(SUM(POW(ratings_difference, 2))) *
+SQRT(SUM(POW(votes_difference, 2))))) AS pearson_r
 FROM RatingsDifference;
 
 `
 
 export const RATING_VOTES_SCATTER_QUERY = `
 SELECT 
-  avg_rating AS rating,
-  num_votes AS votes
+avg_rating AS rating,
+num_votes AS votes
 FROM FactRatings
 WHERE avg_rating IS NOT NULL
-  AND num_votes IS NOT NULL
+AND num_votes IS NOT NULL
 ORDER BY num_votes DESC
 LIMIT 200;
 `;

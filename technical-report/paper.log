@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2026/dev/Arch Linux) (preloaded format=pdflatex 2025.9.26)  21 OCT 2025 17:13
+This is pdfTeX, Version 3.141592653-2.6-1.40.27 (TeX Live 2026/dev/Arch Linux) (preloaded format=pdflatex 2025.10.21)  21 OCT 2025 19:14
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1075,7 +1075,7 @@ LaTeX Font Info:    Font shape `T1/LinuxLibertineT-TLF/b/n' will be
 LaTeX Font Info:    Font shape `T1/LinuxLibertineT-TLF/b/n' will be
 (Font)              scaled to size 10.95pt on input line 138.
  (./dw.tex
-<imdb.png, id=97, 961.5925pt x 1034.86626pt>
+<imdb.png, id=105, 961.5925pt x 1034.86626pt>
 File: imdb.png Graphic file (type png)
 <use imdb.png>
 Package pdftex.def Info: imdb.png  used on input line 4.
@@ -1088,7 +1088,7 @@ Overfull \hbox (15.81552pt too wide) in paragraph at lines 4--5
 
 Class acmart Warning: A possible image without description on input line 6.
 
-<imdb_source.png, id=99, 1701.35625pt x 620.3175pt>
+<imdb_source.png, id=107, 1701.35625pt x 620.3175pt>
 File: imdb_source.png Graphic file (type png)
 <use imdb_source.png>
 Package pdftex.def Info: imdb_source.png  used on input line 9.
@@ -1166,40 +1166,40 @@ Underfull \hbox (badness 10000) in paragraph at lines 63--65
 
 LaTeX Font Info:    Font shape `T1/LinuxBiolinumT-TLF/m/n' will be
 (Font)              scaled to size 7.0pt on input line 11.
-[2.2])
+[2.2]) (./or.tex
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
 
 
 LaTeX Font Info:    Font shape `T1/LinuxLibertineT-TLF/m/n' will be
-(Font)              scaled to size 6.6pt on input line 173.
+(Font)              scaled to size 6.6pt on input line 16.
 LaTeX Font Info:    Font shape `T1/LinuxLibertineT-TLF/m/n' will be
-(Font)              scaled to size 5.5pt on input line 173.
+(Font)              scaled to size 5.5pt on input line 16.
 (/usr/share/texmf-dist/tex/latex/listings/lstlang1.sty
 File: lstlang1.sty 2024/09/23 1.10c listings language file
 )
 LaTeX Font Info:    Font shape `T1/LinuxLibertineT-TLF/m/n' will be
-(Font)              scaled to size 8.0pt on input line 187.
-LaTeX Font Info:    Trying to load font information for T1+zi4 on input line 18
-7.
+(Font)              scaled to size 8.0pt on input line 30.
+LaTeX Font Info:    Trying to load font information for T1+zi4 on input line 30
+.
 
 (/usr/share/texmf-dist/tex/latex/inconsolata/t1zi4.fd
 File: t1zi4.fd 2018/01/14 T1/zi4 (Inconsolata)
 )
 LaTeX Font Info:    Font shape `T1/zi4/m/n' will be
-(Font)              scaled to size 8.0pt on input line 187.
+(Font)              scaled to size 8.0pt on input line 30.
 Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             `zi4' (encoding: T1).
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
-LaTeX Font Info:    Trying to load font information for TS1+zi4 on input line 1
-95.
+LaTeX Font Info:    Trying to load font information for TS1+zi4 on input line 3
+8.
 
 (/usr/share/texmf-dist/tex/latex/inconsolata/ts1zi4.fd
 File: ts1zi4.fd 2018/01/14 TS1/zi4 (Inconsolata)
 )
 LaTeX Font Info:    Font shape `TS1/zi4/m/n' will be
-(Font)              scaled to size 8.0pt on input line 195.
+(Font)              scaled to size 8.0pt on input line 38.
 Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             `zi4' (encoding: TS1).
 (microtype)             For optimal results, create family-specific settings.
@@ -1209,30 +1209,13 @@ Package microtype Info: Loading generic protrusion settings for font family
 [3.3{/usr/share/texmf-dist/fonts/enc/dvips/libertine/lbtn_oexx6f.enc}{/usr/shar
 e/texmf-dist/fonts/enc/dvips/inconsolata/i4-t1-4.enc}{/usr/share/texmf-dist/fon
 ts/enc/dvips/inconsolata/i4-ts1.enc}]
-Underfull \hbox (badness 7308) in paragraph at lines 224--224
-[]|\T1/LinuxLibertineT-TLF/m/n/9 (+20) Peach Pitch-orn Wa-
+Underfull \hbox (badness 10000) in paragraph at lines 61--61
+[]|\T1/LinuxLibertineT-TLF/m/n/9 (+20) Peter Young-
  []
 
 
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 347--347
-[]|\T1/LinuxLibertineT-TLF/m/n/9 (+20) SCIENTIFIC AND TECH-NI-CAL
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 347--347
-\T1/LinuxLibertineT-TLF/m/n/9 (+20) AWARD (Tech-ni-cal Achieve-ment
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 348--348
-[]|\T1/LinuxLibertineT-TLF/m/n/9 (+20) SCIENTIFIC AND TECH-NI-CAL
- []
-
-
-Underfull \hbox (badness 1184) in paragraph at lines 348--348
-\T1/LinuxLibertineT-TLF/m/n/9 (+20) AWARD (Sci-en-tific and En-gi-neer-ing
+Overfull \hbox (5.77179pt too wide) in paragraph at lines 54--70
+ [] 
  []
 
 
@@ -1240,24 +1223,59 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 
 
 
+
+
 [4.4]
-Underfull \hbox (badness 10000) in paragraph at lines 365--367
+Underfull \hbox (badness 10000) in paragraph at lines 188--188
+[]|\T1/LinuxLibertineT-TLF/m/n/9 (+20) SCIENTIFIC AND TECH-NI-CAL
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 188--188
+\T1/LinuxLibertineT-TLF/m/n/9 (+20) AWARD (Tech-ni-cal Achieve-ment
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 189--189
+[]|\T1/LinuxLibertineT-TLF/m/n/9 (+20) SCIENTIFIC AND TECH-NI-CAL
+ []
+
+
+Underfull \hbox (badness 1184) in paragraph at lines 189--189
+\T1/LinuxLibertineT-TLF/m/n/9 (+20) AWARD (Sci-en-tific and En-gi-neer-ing
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 208--210
 
  []
 
 
 
-LaTeX Font Info:    Font shape `T1/zi4/m/n' will be
-(Font)              scaled to size 9.0pt on input line 465.
 
 
 [5.5]
+LaTeX Font Info:    Font shape `T1/zi4/m/n' will be
+(Font)              scaled to size 9.0pt on input line 372.
 
-(./paper.bbl
+
+
+
+[6.6]) (./paper.bbl
 LaTeX Font Info:    Font shape `T1/LinuxLibertineT-TLF/m/it' will be
 (Font)              scaled to size 7.0pt on input line 44.
 LaTeX Info: Redefining \tempurl on input line 61.
 )
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+
+
+! Too many }'s.
+l.181 \end{itemize}}
+                    
+You've closed more groups than you opened.
+Such booboos are generally harmless, so keep going.
+
 
 Class acmart Warning: Some images may lack descriptions.
 
@@ -1274,14 +1292,14 @@ Class acmart Warning: CCS concepts are mandatory for papers over two pages.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `subscript' on input line 545.
+(hyperref)                removing `subscript' on input line 184.
 
 (/usr/share/texmf-dist/tex/generic/stringenc/se-pdfdoc.def
 File: se-pdfdoc.def 2019/11/29 v1.12 stringenc: PDFDocEncoding
 )
 (/usr/share/texmf-dist/tex/generic/stringenc/se-utf8.def
 File: se-utf8.def 2019/11/29 v1.12 stringenc: UTF-8
-) [6.6]
+) [7.7]
 
 Package pbalance Warning: Could not balance, doing nothing.
 
@@ -1291,14 +1309,14 @@ LaTeX2e <2024-11-01> patch level 2
 L3 programming layer <2025-01-18>
  ***********
 Package rerunfilecheck Info: File `paper.out' has not changed.
-(rerunfilecheck)             Checksum: F6327428222F10ED4F8B78F5B0CBE064;3585.
+(rerunfilecheck)             Checksum: F7DB83BBFD2D48B283D84635C49EEAA6;3809.
  ) 
 Here is how much of TeX's memory you used:
- 23848 strings out of 475171
- 377166 string characters out of 5767095
- 1099509 words of memory out of 5000000
- 45769 multiletter control sequences out of 15000+600000
- 714198 words of font info for 323 fonts, out of 8000000 for 9000
+ 23882 strings out of 475171
+ 377682 string characters out of 5767094
+ 1097654 words of memory out of 5000000
+ 45785 multiletter control sequences out of 15000+600000
+ 714596 words of font info for 325 fonts, out of 8000000 for 9000
  175 hyphenation exceptions out of 8191
  90i,13n,131p,1192b,2437s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texmf-dist/fonts/type1/public/inconsolata/Inconsolata-zi4r.pfb></
@@ -1310,10 +1328,10 @@ e1/public/libertine/LinBiolinumTI.pfb></usr/share/texmf-dist/fonts/type1/public
 e/LinLibertineTB.pfb></usr/share/texmf-dist/fonts/type1/public/libertine/LinLib
 ertineTI.pfb></usr/share/texmf-dist/fonts/type1/public/newtx/txmiaX.pfb></usr/s
 hare/texmf-dist/fonts/type1/public/newtx/txsys.pfb>
-Output written on paper.pdf (6 pages, 649916 bytes).
+Output written on paper.pdf (7 pages, 656357 bytes).
 PDF statistics:
- 362 PDF objects out of 1000 (max. 8388607)
- 321 compressed objects within 4 object streams
- 157 named destinations out of 1000 (max. 500000)
- 75467 words of extra memory for PDF output out of 89155 (max. 10000000)
+ 388 PDF objects out of 1000 (max. 8388607)
+ 346 compressed objects within 4 object streams
+ 170 named destinations out of 1000 (max. 500000)
+ 75483 words of extra memory for PDF output out of 89155 (max. 10000000)
 
