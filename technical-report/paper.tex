@@ -126,14 +126,6 @@
 %% This command allows the author to define a more concise list of authors' names for this purpose.
 \renewcommand{\shortauthors}{Trovato et al.}
 
-
-%%
-%% The abstract is a short summary of the work to be presented in the article.
-\begin{abstract}
-This set of guidelines for formatting your research paper has been adapted from the formatting guidelines for ACM SIG Proceedings. The Abstract should consist of 150 to 250 words in a single paragraph that provides the reader with a summary of your research/project and what you intend to do. It gives a brief description of the motivation for your research/project, the problem you intend to cover, the purpose and method for conducting your study, and your results and findings.
-\end{abstract}
-
-
 %%
 %% Keywords
 %% The author(s) should pick words that accurately describe the work being presented. 
@@ -151,20 +143,21 @@ This set of guidelines for formatting your research paper has been adapted from 
 %%
 \section{Introduction}
 
-Conference proceedings and journal publications usually ask authors to follow a set of guidelines to make the paper appear of high quality. Some of our courses require students to adapt these guidelines to prepare them for publishing their work. Thus, it is mandatory that you ensure your research / technical paper look exactly like this document. The easiest way to do this is to simply download a copy of this document and type-over the contents with your own material. Do not change any formatting or introduce your own style.
+The IMDB dataset includes information about different films and series across time. In this project the group included an external dataset called Oscar Awards from Kaggle \cite{FontesLu} to include the awards given to different crew members including directors ,actors, writers and more.  With that in mind the group designed the data warehouse to centralize over the relationship of films, crew members and awards over time. The OLAP  (Online Analytical Processing) application on the other hand tackles the analysis of these relations and the target audience for this application are for stakeholders who are involved in the film industry. These stakeholders can be venture capitalist \cite{investopedia2025vc}, directors, producers and writers.
 
 
 %%
 %%
 %% --- Basic Elements ---
 %%
-\section{Data Warehouse}
 
-\section{ETL Script}
+\input{dw.tex}
 
-\section{OLAP Application}
 
-The \textbf{IMDb Analytics Dashboard} is a web-based OLAP (Online Analytical Processing) application designed to analyze and visualize movie industry data for enhanced decision-making. Built using \textbf{Next.js} and \textbf{React} for the frontend and \textbf{MySQL} for the backend, it provides users such as producers, directors, investors, and studios with interactive tools to explore trends, evaluate performance, and discover meaningful patterns across movies, actors, genres, and awards.
+\input{etl.tex}
+\section{OLAP Application} \label{olap}
+
+The \textbf{IMDb Analytics Dashboard} is a web-based OLAP application designed to analyze and visualize movie industry data for enhanced decision-making. Built using \textbf{Next.js} and \textbf{React} for the frontend and \textbf{MySQL} for the backend, it provides users such as producers, directors, investors, and studios with interactive tools to explore trends, evaluate performance, and discover meaningful patterns across movies, actors, genres, and awards.
 
 \subsection{Main Purpose}
 
@@ -173,9 +166,7 @@ The main purpose of the \textbf{IMDb Analytics Dashboard} is to support \textbf{
 
 \subsection{Analytical Reports and SQL Implementation}
 
-\section{Exploratory Data Analysis Questions}
-
-\subsection{Popular Actors by Success Metric}
+\subsubsection{Popular Actors by Success Metric}
 
 This subsection explores what are the popular actors based on the generated Success metric. Take note that the Success metric is equal to the following:
 $$
@@ -219,7 +210,7 @@ LIMIT 10;
 This operation is a Roll-up, for it groups the data.
 
 \begin{center}
-\begin{tabular}{|p{5cm}|c|c|c|}
+\begin{tabular}{|p{3cm}|c|c|c|}
 \hline
 full name & total titles & avg rating & actor rank\\
 \hline
@@ -237,7 +228,7 @@ Aleksandrina Adamova & 1 & 10 & 1\\
 \end{tabular}
 \end{center}
 
-\subsection{Popular Genres by Success Metric}
+\subsubsection{Popular Genres by Success Metric}
 
 This section explores what are the popular genres based on the generated Success metric. To reiterate, the success metric is the following:
 $$
@@ -284,7 +275,7 @@ tt0390776 & 6.5 & 209 & 34.7562 \\
 \end{center}
 
 
-\subsection{Popular Movies of a Given Actor by Success Metric}
+\subsubsection{Popular Movies of a Given Actor by Success Metric}
 
 This operation is a Roll-up, for it groups the data.
 
@@ -324,7 +315,7 @@ decade & genre & success score \\
 \end{tabular}
 \end{center}
 
-\subsection{Top Oscars Awards by Canonical Category}
+\subsubsection{Top Oscars Awards by Canonical Category}
 
 This subsection explores the what are the top canonical category with the most Oscar awards. 
 
@@ -348,7 +339,7 @@ LIMIT 10;
 This operation is a Roll-up, for it groups the awards from category to canonical category.
 
 \begin{center}
-\begin{tabular}{|p{8cm}|c|}
+\begin{tabular}{|p{5cm}|c|}
 \hline
 \textbf{Canonical Category} & \textbf{Total Wins} \\
 \hline
@@ -366,11 +357,12 @@ HONORARY AWARD & 126 \\
 \end{tabular}
 \end{center}
 
-\section{Visualized EDA}
+\subsection{Visualized EDA}
 
-\subsection{Ratio of Professions of Crew Members}
+\subsubsection{Ratio of Professions of Crew Members}
 
 This section explores the ratio of professions of crew members represented in a Pie Chart.
+\newline
 \begin{lstlisting}[style=SQLStyle]
 SELECT 
   bc.category AS profession,
@@ -401,7 +393,7 @@ production designer & 1086588 \\
 \end{tabular}
 \end{center}
 
-\subsection{Best Film Genre within the Past Decade}
+\subsubsection{Best Film Genre within the Past Decade}
 
 This section explores the best film genre in a Bar Graph.
 \begin{lstlisting}[style=SQLStyle]
@@ -421,11 +413,12 @@ ORDER BY success_score DESC
 LIMIT 10;
 \end{lstlisting}
 
-\subsection{Successful movies per Given genre over Given decade}
+\subsubsection{Successful movies per Given genre over Given decade}
 
-\section{Statistical Tests}
+\subsection{Statistical Tests}
+\subsubsection{Correlation test with Ratings and Votes}
+This section provides a pearsons correlation test between the ratings and votes 
 
-\subsection{Correlation test with Ratings and Votes}
 
 \begin{lstlisting}[style=SQLStyle]
 WITH TopCanonicalCategories AS (
@@ -502,16 +495,32 @@ Query optimization is used to reduce the amount of time querying data from the d
 
 \section{Conclusion}
 
-This project successfully demonstrates the integration of ETL, data warehouse modeling, and OLAP operations for analytical reporting.  
-\textbf{Key learnings:}
+\subsection{Project Summary}
+The \textbf{IMDb Analytics Dashboard} project focused on the design and implementation of a web-based OLAP (Online Analytical Processing) application for movie industry analytics. The system was built using \textbf{Next.js} and \textbf{React} for the frontend and \textbf{MySQL} for the backend, integrating data warehousing and multidimensional analysis concepts. It provides users with interactive tools to explore datasets through operations such as \textbf{roll-up}, \textbf{slice}, \textbf{dice}, and \textbf{drill-down}. These allow users to analyze movie trends, actor performance, genre popularity, and award statistics in varying levels of detail. 
+
+\subsection{Learnings and Insights on Database Concepts}
+
+
 \begin{itemize}
-    \item Building a data warehouse allows time-based and aggregated analytics not possible in OLTP systems.
-    \item ETL ensures the warehouse remains clean and consistently updated.
-    \item OLAP queries (roll-up, drill-down, slice, dice) enable interactive exploration.
-    \item Query optimization (indexes, reformulated SQL, materialized columns) significantly improves query performance.
+	\item \textbf{Importance of Building and Maintaining a Data Warehouse:}  
+	A data warehouse serves as a centralized repository for integrating and organizing data from multiple sources. In this project, it provided a consistent and historical dataset that enabled long-term trend analysis, unlike traditional transactional databases that only store current operational data.
+	
+	\item \textbf{Role of ETL (Extract, Transform, Load):}  
+	The ETL process was essential in cleaning, transforming, and loading IMDb data into structured dimensional tables. This ensured that the warehouse remained accurate and up to date. The extraction phase gathered raw movie data, transformation standardized formats (such as converting genres and professions into dimension tables), and loading populated the analytical schema for OLAP queries.
+	
+	\item \textbf{Purpose of OLAP versus OLTP:}  
+	Unlike OLTP systems used in daily transactions, OLAP is designed for analytical querying and decision support. OLAP enables summarization, aggregation, and pattern discovery allowing users to gain strategic insights rather than just process records. In this project, OLAP operations enabled exploration of high-level summaries and detailed statistics that would be difficult to perform efficiently in an OLTP setup.
+	
+	\item \textbf{Need for Query Optimization:}  
+	Query optimization improves performance and responsiveness in analytical applications. Since OLAP queries often involve large aggregations and joins, optimization strategies such as indexing key attributes, and Common Table Expression significantly reduced computation time. 
+	
+	\item \textbf{Indexing Strategies:}  
+	While MySQL automatically generates indexes for primary and foreign keys, additional indexes can be created on frequently filtered attributes such as genre name or actor name to accelerate query execution. Custom indexes are especially useful when dealing with large-scale data or repetitive aggregation queries.
 \end{itemize}
 
-This data warehouse can serve as the foundation for recommender systems, content analytics dashboards, or trend forecasting tools for entertainment industries.
+\subsection{Contributions and Societal Relevance}
+
+The \textbf{IMDb Analytics Dashboard} contributes both to end users and to the database development community. For industry stakeholders, it enables informed decision-making by providing visual insights into audience behavior, genre trends, and performance metrics. For database developers, it serves as a practical example of how OLAP principles, data warehousing, and ETL pipelines can be applied to real-world datasets. Beyond its technical aspects, the project promotes the use of data analytics for creativity and efficiency in film production, marketing, and investment decisions.
 
 %%
 %% The next two lines define the bibliography style to be used, and
@@ -525,13 +534,6 @@ This data warehouse can serve as the foundation for recommender systems, content
 %%
 %% --- Appendices ---
 %%
-\appendix
 
-\section{Appendices}
-Some conference papers include an Appendix where authors can place supplementary materials. 
-
-For our Technical Report, supplementary materials may include code snippets, SQL statements, sample extract of the dataset, and sample query results. These are used to help your readers better understand your implementation and your discussion.
-
-Note that in the appendix, sections are lettered, not numbered. 
 
 \end{document}

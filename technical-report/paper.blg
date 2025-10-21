@@ -6,62 +6,53 @@ Reallocated singl_function (elt_size=8) to 100 items from 50.
 Reallocated singl_function (elt_size=8) to 100 items from 50.
 Reallocated wiz_functions (elt_size=8) to 6000 items from 3000.
 Database file #1: sample-reference.bib
-I was expecting a `,' or a `}'---line 17 of file sample-reference.bib
- :   
- :   school    = "Royal Institute of Technology (KTH)",
-(Error may have been on previous line)
-I'm skipping whatever remains of this entry
 Reallocated singl_function (elt_size=8) to 100 items from 50.
 Reallocated glb_str_ptr (elt_size=8) to 20 items from 10.
 Reallocated global_strs (elt_size=200001) to 20 items from 10.
 Reallocated glb_str_end (elt_size=8) to 20 items from 10.
 Reallocated singl_function (elt_size=8) to 100 items from 50.
 Reallocated wiz_functions (elt_size=8) to 9000 items from 6000.
-Warning--empty school in Anisi03
-Warning--unrecognized DOI value [99.9999/woot07-S422]
-Warning--unrecognized DOI value [99.9999/woot07-S422]
-Warning--empty organization in Thornburg01
-Warning--empty address in YuGalan2017
-Warning--page numbers missing in both pages and numpages fields in YuGalan2017
-You've used 10 entries,
+Warning--empty organization in investopedia2025vc
+Warning--empty organization in FontesLu
+You've used 2 entries,
             6056 wiz_defined-function locations,
-            1561 strings with 19445 characters,
-and the built_in function-call counts, 9201 in all, are:
-= -- 1065
-> -- 240
-< -- 1
-+ -- 72
-- -- 90
-* -- 637
-:= -- 951
-add.period$ -- 53
-call.type$ -- 10
-change.case$ -- 59
-chr.to.int$ -- 10
-cite$ -- 14
-duplicate$ -- 871
-empty$ -- 610
-format.name$ -- 102
-if$ -- 2081
+            1496 strings with 18180 characters,
+and the built_in function-call counts, 1506 in all, are:
+= -- 153
+> -- 34
+< -- 0
++ -- 10
+- -- 14
+* -- 90
+:= -- 164
+add.period$ -- 9
+call.type$ -- 2
+change.case$ -- 10
+chr.to.int$ -- 2
+cite$ -- 4
+duplicate$ -- 130
+empty$ -- 92
+format.name$ -- 14
+if$ -- 296
 int.to.chr$ -- 2
 int.to.str$ -- 1
-missing$ -- 20
-newline$ -- 124
-num.names$ -- 74
-pop$ -- 287
+missing$ -- 0
+newline$ -- 63
+num.names$ -- 14
+pop$ -- 39
 preamble$ -- 1
-purify$ -- 137
+purify$ -- 26
 quote$ -- 0
-skip$ -- 331
+skip$ -- 65
 stack$ -- 0
-substring$ -- 704
-swap$ -- 77
-text.length$ -- 1
+substring$ -- 103
+swap$ -- 12
+text.length$ -- 0
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 257
-warning$ -- 6
-while$ -- 73
+type$ -- 60
+warning$ -- 2
+while$ -- 14
 width$ -- 0
-write$ -- 240
-(There was 1 error message)
+write$ -- 80
+(There were 2 warnings)
