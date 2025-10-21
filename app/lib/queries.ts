@@ -1,3 +1,5 @@
+import { RowDataPacket } from "mysql2"
+
 export const POPULAR_ACTORS_QUERY = `
 WITH ActorStats AS (
   SELECT 
@@ -136,6 +138,14 @@ export type SuccessGenreDecade = {
 }
 export type SuccessGenreDecadeQueryInput = {
     decade: number,
+}
+
+export const GENRE_LIST_QUERY = `
+SELECT * FROM DimGenre ORDER BY genre_key;
+`
+export interface Genre extends RowDataPacket {
+    genre_key: number,
+    genre_name: string
 }
 export const SUCCESS_MOVIE_GENRE_DECADE_QUERY = `
 SELECT

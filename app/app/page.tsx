@@ -576,7 +576,9 @@ export default function Dashboard() {
                       formatter={(value: number, key: string, payload: any) => {
                         if (key === "success_score") {
                           return [
-                            `${value.toFixed(2)} (Total Titles: ${payload.payload.total_titles})`,
+                            `${value.toFixed(2)} (Total Titles: ${
+                              payload.payload.total_titles
+                            })`,
                             "Success Score",
                           ];
                         }
@@ -711,47 +713,45 @@ export default function Dashboard() {
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-10">
-              <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
-                Top Oscar Categories
-              </h3>
-              {stats.topOscarAwards.length > 0 ? (
-                <div className="overflow-x-auto rounded-2xl shadow bg-white dark:bg-gray-900">
-                  <table className="min-w-full border-collapse">
-                    <thead className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 uppercase text-sm">
-                      <tr>
-                        <th className="px-4 py-3 text-left">
-                          Canonical Category
-                        </th>
-                        <th className="px-4 py-3 text-right">Total Wins</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {stats.topOscarAwards.map((item, i) => (
-                        <tr
-                          key={i}
-                          className={`border-t hover:bg-gray-50 dark:hover:bg-gray-800 transition ${
-                            i % 2 === 0
-                              ? "bg-white dark:bg-gray-900"
-                              : "bg-gray-50 dark:bg-gray-800/60"
-                          }`}
-                        >
-                          <td className="px-4 py-3">
-                            {item.canonical_category || "Unknown"}
-                          </td>
-                          <td className="px-4 py-3 text-right font-semibold text-green-600">
-                            {item.total_wins}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="text-gray-400 text-center py-8">
-                  No Oscar data available
-                </p>
-              )}
+          <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
+            Top Oscar Categories
+          </h3>
+          {stats.topOscarAwards.length > 0 ? (
+            <div className="overflow-x-auto rounded-2xl shadow bg-white dark:bg-gray-900">
+              <table className="min-w-full border-collapse">
+                <thead className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 uppercase text-sm">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Canonical Category</th>
+                    <th className="px-4 py-3 text-right">Total Wins</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.topOscarAwards.map((item, i) => (
+                    <tr
+                      key={i}
+                      className={`border-t hover:bg-gray-50 dark:hover:bg-gray-800 transition ${
+                        i % 2 === 0
+                          ? "bg-white dark:bg-gray-900"
+                          : "bg-gray-50 dark:bg-gray-800/60"
+                      }`}
+                    >
+                      <td className="px-4 py-3">
+                        {item.canonical_category || "Unknown"}
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-green-600">
+                        {item.total_wins}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
+          ) : (
+            <p className="text-gray-400 text-center py-8">
+              No Oscar data available
+            </p>
+          )}
+        </div>
 
         <div className="mb-12">
           <h2 className="text-3xl font-bold text-white mb-6 flex items-center">
@@ -1095,7 +1095,9 @@ export default function Dashboard() {
                           borderRadius: "12px",
                         }}
                         formatter={(value: number, name: string) => [
-                          name === "Votes" ? value.toLocaleString() : value.toFixed(1),
+                          name === "Votes"
+                            ? value.toLocaleString()
+                            : value.toFixed(1),
                           name,
                         ]}
                       />
@@ -1113,8 +1115,6 @@ export default function Dashboard() {
                 </p>
               )}
             </div>
-
-            
           </div>
         </div>
       </div>
@@ -1124,9 +1124,7 @@ export default function Dashboard() {
           📊 IMDb Analytics Dashboard • Built with Next.js & Recharts • MySQL
           Database
         </p>
-        <p className="text-xs mt-2 text-gray-500">
-          STADVDB Project
-        </p>
+        <p className="text-xs mt-2 text-gray-500">STADVDB Project</p>
       </div>
     </div>
   );
