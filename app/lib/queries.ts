@@ -2,19 +2,19 @@ import { RowDataPacket } from "mysql2"
 
 export const POPULAR_ACTORS_QUERY = `
 WITH ActorStats AS (
-    SELECT 
-            bc.person_key,
-            COUNT(DISTINCT bc.title_key) AS total_titles,
-            AVG(fr.success_score) AS avg_rating
-        FROM FactRatings fr
-        JOIN BridgeCrew bc ON fr.title_key = bc.title_key
-        WHERE bc.category IN ('actor', 'actress')
-        GROUP BY bc.person_key
+SELECT 
+    bc.person_key,
+    COUNT(DISTINCT bc.title_key) AS total_titles,
+    AVG(fr.success_score) AS avg_rating
+    FROM FactRatings fr
+JOIN BridgeCrew bc ON fr.title_key = bc.title_key
+WHERE bc.category IN ('actor', 'actress')
+GROUP BY bc.person_key
 )
 SELECT 
     dp.full_name,
     a.total_titles, 
-    a.avg_rating, -- success_score is renamed as avg_rating
+    a.avg_rating, -- success_score is renamed as avg_rating for the app
     RANK() OVER (ORDER BY a.avg_rating DESC, a.total_titles DESC) AS actor_rank
 FROM ActorStats a
 JOIN DimPerson dp ON dp.person_key = a.person_key
