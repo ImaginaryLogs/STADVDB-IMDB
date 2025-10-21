@@ -48,9 +48,10 @@ JOIN DimPerson dp ON dp.person_key = a.person_key
 LIMIT 10;
 \end{lstlisting}
 
-This operation is a Roll-up for from it aggregates the success metrics titles at the actor-level
+This operation is a Roll-up for from it aggregates the success metrics titles at the actor-level. With the following query, we obtain the following information:
 
-\begin{center}
+\begin{table}[h!]
+	\centering
 \begin{tabular}{|p{2cm}|c|c|c|}
 \hline
 full name & total titles & avg rating & actor rank\\
@@ -67,7 +68,10 @@ Tony Sirico & 1 & 121.51786804199219 & 9\\
 Cricket Leigh & 1 & 120.3641586303711 & 10\\
 \hline
 \end{tabular}
-\end{center}
+\caption{Top 10 Popular Actors ranked by Average Success Score (renamed as avg rating).}
+\end{table}
+
+The results show that RJ Mitte and Steven Quezada are the top actors based on the metric.
 
 \subsubsection{Popular Genres by Success Metric}
 
@@ -77,7 +81,6 @@ $$
 $$
 
 Based on this metric, we will use the ff. SQL query to answer it.
-
 
 \begin{lstlisting}[style=SQLStyle]
 	SELECT 
@@ -95,7 +98,8 @@ Based on this metric, we will use the ff. SQL query to answer it.
 
 This operation is a Roll-up, for it aggregates from title-level at the genre-level.
 
-\begin{center}
+\begin{table}[h!]
+	\centering
 \begin{tabular}{|c|c|c|c|}
 \hline
 genre & avg rating & success score & total titles \\
@@ -112,7 +116,10 @@ FFTFFFFT$\cdots$ & 7.6 & 67.7071075439 & 1\\
 FFFFFFFF$\cdots$ & 8.1 & 67.6852767657 & 2\\
 \hline
 \end{tabular}
-\end{center}
+\caption{Top 10 Popular Genres by Success Metric.}
+\end{table}
+
+These are one hot combinations of genres. To illustrate, "FFFFFFFTFFTFFTFFFFFFFFFFFFFF" is a combination of genres which encodes Crime, Drama, and Thriller. 
 
 \subsubsection{Popular Movies of a Given Name by Success Metric}
 
@@ -134,9 +141,11 @@ JOIN PersonInfo pi ON pi.person_key = fcp.person_key
 ORDER BY success_score DESC;
 \end{lstlisting}
 
-Given that the input parameter for `full\_name` is "Robert Downey Jr.", we obtain the following data:
 
-\begin{center}
+This operation is a slice, for filters the data by a single actor name parameter. Given that the input parameter for `full\_name` is "Robert Downey Jr.", we obtain the following data:
+
+\begin{table}[h!]
+	\centering
 	\begin{tabular}{|c|c|c|c|}
 		\hline
 		title key & avg rating & num votes & success score \\
@@ -151,11 +160,12 @@ Given that the input parameter for `full\_name` is "Robert Downey Jr.", we obtai
 		tt2354581 & 7.8 & 18 & 22.9666 \\
 		tt32159454 & 6.3 & 29 & 21.4275 \\
 		tt10334498 & 5.0 & 70 & 21.3134 \\
-		\hline
-	\end{tabular}
-\end{center}
+	\hline
+\end{tabular}
+\caption{Top 10 Popular Movies of "Robert Downey Jr."}
+\end{table}
 
-This operation is a slice, for filters the data by a single actor name parameter.
+The title key for the top movie for this actor is "The Sympathizer", with an average rating of 6.8, but a whopping 9046 number of votes. 
 
 \subsubsection{Top Oscars Awards by Canonical Category}
 
@@ -178,7 +188,7 @@ The following is the SQL statement:
 	LIMIT 10;
 \end{lstlisting}
 
-This results with the following results:
+This operation is a Roll-up, for it aggregates the awards from category to canonical category; Moreover, this can be considered a Drill-down, for it is going from category to canonical category. This results with the following results:
 
 \begin{center}
 	\begin{tabular}{|p{5cm}|c|}
@@ -199,7 +209,7 @@ This results with the following results:
 	\end{tabular}
 \end{center}
 
-This operation is a Roll-up, for it aggregates the awards from category to canonical category.
+The results show that the canonical category "SCIENTIFIC AND TECHNICAL AWARD (Technical Achievement Award)" has the most total wins with 348 wins. Followed by "SCIENTIFIC AND TECHNICAL AWARD (Scientific and Engineering Award)" with 250 wins. This shows that progress in the science and technical field of entertainment is highly valued to getting an Oscar Award.
 
 \subsection{Visualized EDA}
 
@@ -218,7 +228,7 @@ This section explores the ratio of professions of crew members represented in a 
 	LIMIT 10;
 \end{lstlisting}
 
-With this query, the following information is obtained.
+This is a roll-up OLAP operation, for it aggregates crew members at the category level. With this query, the following information is obtained.
 
 \begin{center}
 	\begin{tabular}{|p{4cm}|c|}
@@ -239,49 +249,67 @@ With this query, the following information is obtained.
 	\end{tabular}
 \end{center}
 
-This is a roll-up OLAP operation, for it aggregates crew members at the category level.
+This results shows that the profession with the most number of crew members are actors with 20,660,285, followed by actress with 16,211,647. 
+
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=0.7\linewidth]{images/image2.png}
+	\caption{}
+\end{figure}
 
 \subsubsection{Best Film Genre within the Past Decade}
 
 This section explores the best film genre in a Bar Graph.
 \begin{lstlisting}[style=SQLStyle]
 	WITH GenreSuccess AS (
-		SELECT
-			dt.release_decade AS decade,
-			dt.genre AS genre,
-			fr.success_score AS success_score
-		FROM FactRatings fr
-		JOIN DimTitle dt ON fr.title_key = dt.title_key
+	SELECT
+	dt.release_decade AS decade,
+	dt.genre AS genre,
+	fr.success_score AS success_score
+	FROM FactRatings fr
+	JOIN DimTitle dt ON fr.title_key = dt.title_key
 	)
-	SELECT decade, genre, success_score
+	SELECT 
+	decade, 
+	genre, 
+	AVG(success_score) AS avg_success_score
 	FROM GenreSuccess
 	WHERE decade = $1
-	ORDER BY success_score DESC
+	GROUP BY decade, genre
+	ORDER BY avg_success_score DESC
 	LIMIT 10;
+	
 \end{lstlisting}
 
-Given that we have decade as 2010, we obtain the following information from the query:
+This query performs a Dice OLAP operation, for it filters (decade constraint) and groups by genre. simultaneously. Given that we have decade as 2010, we obtain the following information from the query:
 
 \begin{center}
 	\begin{tabular}{|c|c|c|}
 \hline
 decade & genre & success score\\
 \hline
-2,010 & FFFFFFFT$\cdots$ & 135.478\\
-2,010 & FFFFFFFT$\cdots$ & 135.478\\
-2,010 & FFFFFFFT$\cdots$ & 135.478\\
-2,010 & FFFFFFFT$\cdots$ & 135.478\\
-2,010 & FFFFFFFT$\cdots$ & 135.478\\
-2,010 & FFFFFFFT$\cdots$ & 135.478\\
-2,010 & FFFFFFFT$\cdots$ & 135.478\\
-2,010 & FFFFFFFT$\cdots$ & 135.478\\
-2,010 & FFFFFFFT$\cdots$ & 135.478\\
-2,010 & FFFFFFFT$\cdots$ & 135.478\\
+2010 & FFFTFTFFFFFF$\cdots$ & 99.469970703125\\
+2010 & FFFTFFFFFFFF$\cdots$ & 82.13441467285156\\
+2010 & FFFFFFFTFTFF$\cdots$ & 78.83134842966939\\
+2010 & FFFFFFFTFFTF$\cdots$ & 78.17122020721436\\
+2010 & FFFFFFFFTFFF$\cdots$ & 76.80824279785156\\
+2010 & FFFTFFFFFFTF$\cdots$ & 75.39966583251953\\
+2010 & FFFFFFFFFFFF$\cdots$ & 71.67395782470703\\
+2010 & FFFFFFFTFFTF$\cdots$ & 70.41068196296692\\
+2010 & FFFTFFFFFFFF$\cdots$ & 69.62734985351562\\
+2010 & FFFFFFFTFFFF$\cdots$ & 69.42658996582031\\
 \hline
 \end{tabular}
 \end{center}
 
-This query performs a Dice OLAP operation, for it filters (decade constraint) and groups by genre. simultaneously.
+The genre here is a one hot encoding of combination genres. Following decoding of the genre, titles with combination of `Musical` and `Mystery` genre tends to have a high success score within the 2010s decade. A function can be used to decode what does the genre combination mean 
+
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=0.7\linewidth]{images/image1.png}
+	\caption{}
+\end{figure}
+
 
 \subsubsection{Successful movies per Given Genre over Given Decade}
 
@@ -299,7 +327,7 @@ This section explores what are the most successful movies given a combination of
 	ORDER BY release_year;
 \end{lstlisting}
 
-Given that given genre is "FFFFFFFTFFTFFTFFFFFFFFFFFFFF", and the release decase is from 2000 to 2010. The results shows the ff.:
+This operation is a Roll-up and Dice OLAP operation, for it aggregates based title key, release year, and success score, and aggregates based on genre and release year. Given that given genre is "FFFFFFFTFFTFFTFFFFFFFFFFFFFF" which encodes Crime, Drama, and Thriller; and the release decase is from 2000 to 2010. The results shows the ff.:
 
 \begin{center}
 \begin{tabular}{|p{4cm}|c|c|}
@@ -317,12 +345,18 @@ tt1321865 & 2010 & 73.0037\\
 \end{tabular}
 \end{center}
 
-This operation is a Roll-up and Dice OLAP operation, for it aggregates based title key, release year, and success score, and aggregates based on genre and release year.
+This genre combination shows the overall trendline for movies success. The title key refers to a movie's orignal title named "L'Affaire Dominici" or its alternative name as "The Dominici Case" in 2003. To illustrate the idea, of how it can be graphed. The following is the scatter plot for Action Movies in the 2010s.
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=0.7\linewidth]{images/image3.png}
+	\caption{}
+\end{figure}
+
 
 \subsection{Statistical Tests}
 \subsubsection{Correlation test with Ratings and Votes}
-This section provides a pearsons correlation test between the ratings and votes 
 
+This section explores whether or not the number of votes for a given title in the IMDB website has a correlaton with the rating it has.
 
 \begin{lstlisting}[style=SQLStyle]
 WITH OverallRatings AS (
@@ -343,6 +377,16 @@ SELECT
 	SQRT(SUM(POW(votes_difference, 2))))) AS pearson_r
 FROM RatingsDifference;
 \end{lstlisting}
+
+Based on the query above, we can conduct the following hypothesis test to determine whether there exists a statistically significant relationship between IMDb ratings and number of votes. The null hypothesis states that there is no correlation between these two variables, while the alternative hypothesis states that a correlation exists.
+
+\begin{itemize}
+	\item $H_0$: There is \textbf{no linear relationship} between ratings and votes ($\rho = 0$)
+	\item $H_1$: There \textbf{is a linear relationship} between ratings and votes ($\rho \neq 0$)
+\end{itemize}
+
+Given the following is the output of the result:
+
 \begin{center}
 	\begin{tabular}{|p{8cm}|}
 		\hline
@@ -353,7 +397,44 @@ FROM RatingsDifference;
 	\end{tabular}
 \end{center}
 
-This 
+and assuming the number of samples ($n$) is sufficiently large (i.e., $n > 30$), the test statistic for Pearson’s correlation is:
+\[
+t = r \sqrt{\frac{n - 2}{1 - r^2}}
+\]
+which follows a Student’s t-distribution with $(n - 2)$ degrees of freedom.
+
+Using the correlation result from the previous SQL query and substituting $r = 0.0687$, the test yields a very small $t$-statistic, implying a high $p$-value $(p > 0.05)$. Therefore, we \textbf{fail to reject the null hypothesis}, meaning there is no statistically significant correlation between IMDb ratings and number of votes.
+
+This is supported by the the fact that if we try to create scatter plot for number of votes and ratings. This graphically does not show a clear linear relationship.
+
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=0.7\linewidth]{images/image4.png}
+	\caption{Scatter Plot IMDb Ratings and Votes}
+\end{figure}
+
+
+
+
+\begin{center}
+	\begin{tabular}{|p{2cm}|p{4cm}|}
+		\hline
+		\textbf{Statistic} & \textbf{Value / Interpretation} \\
+		\hline
+		Pearson Correlation ($r$) & 0.0687 \\
+		\hline
+		$t$-statistic & $\approx 1.25$ (for large $n$) \\
+		\hline
+		$p$-value & $> 0.05$ \\
+		\hline
+		Decision & Fail to reject $H_0$ \\
+		\hline
+		Interpretation & There is no statistically significant correlation between IMDb ratings and the number of votes. This suggests that the number of votes does not necessarily imply higher ratings. \\
+		\hline
+	\end{tabular}
+\end{center}
+
+This test validates that IMDb’s weighted rating system may not have a direct linear relationship between the number of votes and the computed average rating. Thus, other factors such as vote weighting, voter credibility, or IMDb’s internal normalization may influence the published ratings.
 
 
 \section{Query Processing and Optimization}
@@ -361,50 +442,133 @@ This
 \textbf{Query Optimization Overview:}  
 Query optimization is used to reduce the amount of time querying data from the database. Query optimization uses multiple SQL query techniques and commands to optimize selecting data from one or more tables and prevent doing too many operations or joining too many rows, leading to a slower return. 
 
-\textbf{Strategies Applied:}
+\subsection{Strategies Applied}
 \begin{itemize}
-	\item \textbf{Indexing}: Created composite indexes such as:
+	\item \textbf{Indexing}: 
+	Created indexes for the fact tables and dimension tables with the ff.:
 	\begin{lstlisting}[style=SQLStyle]
-		CREATE INDEX idx_factratings_title ON FactRatings(title_key);
-		CREATE INDEX idx_person_fullname ON DimPerson(full_name);
+CREATE INDEX idx_factratings_title ON FactRatings(title_key);
+CREATE INDEX idx_factoscar_person ON FactOscarAwards(person_key);
+CREATE INDEX idx_ftcgp_genre_year ON FactCrewPerformancePerFilmGenre (release_year);
+CREATE INDEX idx_bridgecrew_title_category ON BridgeCrew(title_key, category);
+CREATE INDEX idx_bridgecrew_person ON BridgeCrew(person_key);
+CREATE INDEX idx_factratings_title_avg ON FactRatings(title_key, avg_rating, num_votes);
+CREATE INDEX idx_bridgecrew_person_category ON BridgeCrew(person_key, category);
+CREATE INDEX idx_dimtitle_titlekey ON DimTitle(title_key);
+CREATE INDEX idx_factoscar_category_winner ON FactOscarAwards (class, canonical_category, is_winner);
+CREATE INDEX idx_factoscar_year ON FactOscarAwards (ceremony_year);
+CREATE INDEX idx_dimtitle_releaseyear ON DimTitle(release_year);
+CREATE INDEX idx_factratings_titlekey ON FactRatings(title_key);
+CREATE INDEX idx_dimtitle_genre_year ON DimTitle(genre, release_year);
+CREATE INDEX idx_factratings_avgvotes ON FactRatings(avg_rating, num_votes);
+CREATE INDEX idx_dimperson_fullname ON DimPerson(full_name);
 	\end{lstlisting}
 	\item \textbf{Query Restructuring}: CTEs and selective joins reduced intermediate result sizes.
 	\item \textbf{Materialized Columns}: Success metric as a \texttt{GENERATED ALWAYS STORED} column avoids recomputation.
 	\item \textbf{Hardware Optimization}: MySQL buffer pool increased from 1GB to 8GB.
-	\item \textbf{Hardware Optimization}: MySQL CTE Recursion Size from 1000 to 10000.
+	\item \textbf{Recursion Depth Optimization}: MySQL CTE recursion size increased from 1000 to 10000.
+\end{itemize}
+
+\subsection{Query-Specific Optimization}
+
+\subsubsection{Popular Actors by Success Metric}
+
+\begin{itemize}
+	\item The query groups performance metrics by \texttt{person\_key} with a ranking window function.  
+	\item Optimization: Index on \texttt{BridgeCrew.person\_key} and \texttt{Fact Ratings. title\_key} to reduce join cost.
+\end{itemize}
+
+\subsubsection{Popular Genres by Success Metric}
+
+\begin{itemize}
+\item Uses aggregated averages of \texttt{success\_score} grouped by \texttt{genre}.  
+\item Optimization: Indexed \texttt{DimTitle.genre} and used CTE to pre-filter release years to reduce scan time.
+\end{itemize}
+
+\subsubsection{Popular Movies of a Given Actor by Success Metric}
+\begin{itemize}
+\item Joins filtered by a single \texttt{person\_key} retrieved from \texttt{DimPerson}.  
+\item Optimization: Used parameterized CTE to limit the search space.
+\end{itemize}
+
+\subsubsection{Top Oscars Awards by Canonical Category}
+
+\begin{itemize}
+\item Aggregates awards grouped by canonical category.  
+\item Optimization: Index on \texttt{FactOscarAwards.canonical\_category} improves grouping speed.
+\end{itemize}
+
+\subsubsection{Ratio of Professions of Crew Members}
+
+\begin{itemize}
+\item A roll-up operation that counts categories.  
+\item Optimization: Added index on \texttt{BridgeCrew.category} for faster grouping.
+\end{itemize}
+
+\subsubsection{Best Film Genre within the Past Decade}
+
+\begin{itemize}
+\item Pre-aggregated using decade-level roll-ups on \texttt{release\_year}.  
+\item Optimization: Generated column \texttt{release\_decade} and indexed it to reduce computation per query.
+\end{itemize}
+
+\subsubsection{Successful Movies per Given Genre over Given Decade}
+
+\begin{itemize}
+\item A temporal trend analysis (line graph) query using roll-up and slice.  
+\item Optimization: Added composite index on \texttt{(genre, release\_year)} to improve scan performance.
+\end{itemize}
+
+\subsubsection{Correlation Test with Ratings and Votes}
+
+\begin{itemize}
+\item Computes Pearson correlation from FactRatings.  
+\item Optimization: Derived averages via CTEs to minimize repeated scans and reduced memory usage by precomputing sums.
 \end{itemize}
 
 \textbf{OLAP Optimization:}
 \begin{itemize}
-	\item \textbf{Roll-up/Drill-down}: Pre-aggregating data (FactCrewPerformancePerFilmGenre).
-	\item \textbf{Slice/Dice}: Filtering subsets efficiently through indexed columns.
+	\item \textbf{Roll-up/Drill-down}: Pre-aggregated data in FactCrewPerformancePerFilmGenre to allow queries to move between year and decade levels.
+	\item \textbf{Slice/Dice}: Filtering subsets efficiently through indexed columns (e.g., by genre, release decade).
 \end{itemize}
 
 \section{Results and Analysis}
 
-The testing of the ETL script is done through inserting dummy data and checking whether or not the values were added correctly. Since running the script on the main source database would take a long time, we created dummy data of a few rows based on the original datasets to validate each of the script's SQL queries. Since the script was made in SQL and the queries are being done on a source database, we simply inserted new values and tables separate from the actual source values to test from and insert to a dummy database for verification. 
-
-The OLAP scripts were made with optimization in mind, accounting for both accuracy of the output and the performance running the script. To begin our approach to a query, we broke down the problem to find and select necessary values. From there, we made and ran SQL queries using a naive, unoptimized approach for verification of its output. We can then try to build an optimized version of the query then running those to check its validity. Incorrect outputs or error messages means that the query needs to be corrected before further optimization is done. In the case where the performance of the unoptimized query is the same as the "optimized" version, then we will decide on our approach, whether we keep it or make it more optimized, depending on whether or not further optimization can be made.
-
-\textbf{Functional Testing:}
+\textbf{Functional Testing:}  
 \begin{itemize}
 	\item Verified correctness of ETL loading and derived columns.
-	\item Verified all success metrics recompute correctly.
+	\item Confirmed that generated columns (e.g., success\_score, release\_decade) computed accurately.
+	\item Checked validity of OLAP operations (roll-up, slice, and dice) through manual aggregation validation.
 \end{itemize}
 
-\textbf{Performance Testing:}
-\begin{itemize}
-	\item Each query executed 5 times for averaging.
-	\item Queries improved by 35--60\% after indexing on join keys.
-	\item Correlation test dropped from 2.8s to 1.6s average execution time.
-\end{itemize}
+\textbf{Performance Testing:}  
+Testing was conducted by running each analytical query under two conditions: the default 1GB MySQL buffer pool and an optimized configuration with 8GB. Execution time was measured across multiple runs using \texttt{EXPLAIN ANALYZE} and the MySQL slow query log.
 
-\textbf{Key Findings:}
-\begin{itemize}
-	\item Ratings and votes weakly correlated ($r \approx 0.07$).
-	\item ``Actor'' and ``Director'' are the most frequent professions.
-	\item Action and Drama dominate high success scores in the past decade.
-\end{itemize}
+\begin{table}[h!]
+	\centering
+	\begin{tabular}{|p{6cm}|c|c|}
+		\hline
+		\textbf{Query Name} & \textbf{1 GB} & \textbf{8 GB} \\
+		\hline
+		Popular Actors by Success Metric & 6m 11s & 1m 42s \\
+		Popular Genres by Success Metric & 6m 3s & 19s \\
+		Popular Movies of a Given Name by Success Metric & 5m 36s & 0.016s \\
+		Top Oscars Awards by Canonical Category & 2m 31s & 0.02s \\
+		Ratio of Professions of Crew Members & 2m 28s & 36s \\
+		Best Film Genre within the Past Decade & 1m 49s & 2s \\
+		Successful Movies per Given Genre over Given Decade & 5m 24s & 2m 45s \\
+		Correlation Test with Ratings and Votes & 1m 42s & 6.7s \\
+		\hline
+	\end{tabular}
+	\caption{Performance comparison between default 1GB and optimized 8GB MySQL configurations.}
+\end{table}
+
+\textbf{Analysis:}  
+Query execution time significantly improved after index creation and increasing available memory.  
+Denormalized structures (fact tables) improved analytical aggregation speed, while dimension indexing reduced join costs.  
+The correlation test query benefited from reduced intermediate CTE recalculation.  
+
+Overall, optimization strategies led to up to high reduction in query time for complex analytical workloads.
 
 \section{Conclusion}
 
