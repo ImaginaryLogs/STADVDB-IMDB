@@ -118,6 +118,7 @@ export type RatioProfessionsCrewMember = {
 export const SUCCESS_GENRE_DECADE_QUERY = `
 WITH GenreSuccess AS (
     SELECT
+    	dt.title_key AS title,
         dt.release_decade AS decade,
         dt.genre AS genre,
         fr.success_score AS success_score
@@ -125,9 +126,9 @@ WITH GenreSuccess AS (
     JOIN DimTitle dt ON fr.title_key = dt.title_key
 )
 SELECT
-    decade, genre, success_score
+    DISTINCT title,decade, genre, success_score
 FROM GenreSuccess
-WHERE decade = ?
+WHERE decade = 1970
 ORDER BY success_score DESC
 LIMIT 10;
 `
