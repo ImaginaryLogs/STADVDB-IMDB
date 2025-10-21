@@ -32,12 +32,20 @@ interface DashboardStats {
   totalPersons: number;
   totalAwards: number;
   avgRating: number;
-  // EDA - Roll-up
   popularActors: PopularActors[];
-  genreDistribution: PopularGenres[];
-  crewProfessionRatio: RatioProfessionsCrewMember[];
-  // Charts
-  bestFilmGenre: PopularGenres[];
+  genreDistribution: {
+    rawGenre: string;
+    label: string;
+    avg_rating: number;
+    success_score: number;
+    total_titles: number;
+  }[];
+  crewProfessionRatio: {
+    profession: string;
+    count: number;
+    percentage: number;
+  }[];
+  bestFilmGenre: (SuccessGenreDecade & { genreName: string })[];
   actorGenrePopularity: {
     actor: string;
     genre: string;
@@ -46,13 +54,14 @@ interface DashboardStats {
   }[];
   genreSuccessTrend?: {
     year: number;
-    successCount: number;
-    avgRating: number;
+    avgSuccess: number;
+    count: number;
   }[];
-  // Stats
-  correlationRatingsVotes: RatingVotesCorrelation[];
+  correlationRatingsVotes: {
+    pearson_r: number;
+    points: { rating: number; votes: number }[];
+  }[];
   topOscarAwards: TopOscarByCategory[];
-  // Actor Profile
   actorProfile?: {
     actor: string;
     totalMovies: number;
@@ -60,14 +69,44 @@ interface DashboardStats {
     totalVotes: number;
     topGenres: { genre: string; count: number; avgRating: number }[];
     recentMovies: {
-      title: string;
-      year: number;
-      genre: string;
-      rating: number;
-      votes: number;
+      title_key: string;
+      avg_rating: number;
+      num_votes: number;
+      success_score: number;
     }[];
   };
 }
+
+const GENRE_LOOKUP = [
+  "Action",
+  "Adult",
+  "Adventure",
+  "Animation",
+  "Biography",
+  "Comedy",
+  "Crime",
+  "Documentary",
+  "Drama",
+  "Family",
+  "Fantasy",
+  "Film-Noir",
+  "Game-Show",
+  "History",
+  "Horror",
+  "Music",
+  "Musical",
+  "Mystery",
+  "News",
+  "Reality-TV",
+  "Romance",
+  "Sci-Fi",
+  "Short",
+  "Sport",
+  "Talk-Show",
+  "Thriller",
+  "War",
+  "Western",
+];
 
 const COLORS = [
   "#3B82F6",
@@ -79,6 +118,17 @@ const COLORS = [
   "#14B8A6",
   "#F97316",
 ];
+
+const decodeGenres = (encoded?: string): string[] => {
+  if (!encoded) return [];
+  return encoded.split("").reduce<string[]>((acc, flag, idx) => {
+    if (flag.toUpperCase() === "T") {
+      const name = GENRE_LOOKUP[idx] ?? `Genre ${idx + 1}`;
+      acc.push(name);
+    }
+    return acc;
+  }, []);
+};
 
 const getEmptyData = (): DashboardStats => ({
   totalMovies: 0,
@@ -103,14 +153,11 @@ export default function Dashboard() {
 
   const [formGenre, setFormGenre] = useState("Action");
   const [formDecade, setFormDecade] = useState("2010");
-  const [formAfterYear, setFormAfterYear] = useState("2020");
   const [trendLoading, setTrendLoading] = useState(false);
 
-  // Best Film Genre decade state
   const [bestGenreDecade, setBestGenreDecade] = useState("2010");
   const [bestGenreLoading, setBestGenreLoading] = useState(false);
 
-  // Actor search state
   const [actorName, setActorName] = useState("");
   const [actorSearchLoading, setActorSearchLoading] = useState(false);
 
@@ -118,90 +165,172 @@ export default function Dashboard() {
     setMounted(true);
   }, []);
 
-  // Fetch all initial dashboard data
   const fetchDashboardData = async () => {
-    try {
-      // Fetch all data in parallel
-      const [
-        popularActorsRes,
-        popularGenresRes,
-        crewProfessionsRes,
-        correlationRes,
-        oscarAwardsRes,
-      ] = await Promise.all([
-        fetch("/api/get-popular-actors"),
-        fetch("/api/get-popular-genres"),
-        fetch("/api/get-ratio-crew-professions"),
-        fetch("/api/get-correlation-rating-votes"),
-        fetch("/api/get-top-oscar-awards"),
-      ]);
+    const [
+      popularActorsRes,
+      popularGenresRes,
+      crewProfessionsRes,
+      correlationRes,
+      oscarAwardsRes,
+    ] = await Promise.all([
+      fetch("/api/get-popular-actors"),
+      fetch("/api/get-popular-genres"),
+      fetch("/api/get-ratio-crew-professions"),
+      fetch("/api/get-correlation-rating-votes"),
+      fetch("/api/get-top-oscar-awards"),
+    ]);
 
-      const [
-        popularActorsData,
-        popularGenresData,
-        crewProfessionsData,
-        correlationData,
-        oscarAwardsData,
-      ] = await Promise.all([
-        popularActorsRes.json(),
-        popularGenresRes.json(),
-        crewProfessionsRes.json(),
-        correlationRes.json(),
-        oscarAwardsRes.json(),
-      ]);
+    const [
+      popularActorsData,
+      popularGenresData,
+      crewProfessionsData,
+      correlationData,
+      oscarAwardsData,
+    ] = await Promise.all([
+      popularActorsRes.json(),
+      popularGenresRes.json(),
+      crewProfessionsRes.json(),
+      correlationRes.json(),
+      oscarAwardsRes.json(),
+    ]);
 
-      setStats((prev) => ({
-        ...prev,
-        popularActors: popularActorsData || [],
-        genreDistribution: popularGenresData || [],
-        crewProfessionRatio: crewProfessionsData || [],
-        correlationRatingsVotes: correlationData.data || [],
-        topOscarAwards: oscarAwardsData || [],
-      }));
-    } catch (err: any) {
-      console.error("Dashboard data fetch error:", err);
-      throw err;
-    }
+    const processedActors = Array.isArray(popularActorsData)
+      ? popularActorsData.map((item: any) => ({
+          full_name: item.full_name,
+          total_titles: Number(item.total_titles ?? 0),
+          avg_rating: Number(item.avg_rating ?? 0),
+          actor_rank: Number(item.actor_rank ?? 0),
+        }))
+      : [];
+
+    const processedGenres = Array.isArray(popularGenresData)
+      ? popularGenresData.map((item: PopularGenres) => {
+          const decoded = decodeGenres(item.genre);
+          return {
+            rawGenre: item.genre,
+            label: decoded.length ? decoded.join(", ") : "Unknown",
+            avg_rating: Number(item.avg_rating ?? 0),
+            success_score: Number(item.success_score ?? 0),
+            total_titles: Number(item.total_titles ?? 0),
+          };
+        })
+      : [];
+
+    const processedCrew = Array.isArray(crewProfessionsData)
+      ? crewProfessionsData.map((item: RatioProfessionsCrewMember) => ({
+          profession: item.profession,
+          count: Number(item.count ?? 0),
+        }))
+      : [];
+
+    const totalCrew = processedCrew.reduce((sum, item) => sum + item.count, 0);
+    const crewWithPercent = processedCrew.map((item) => ({
+      ...item,
+      percentage: totalCrew
+        ? parseFloat(((item.count / totalCrew) * 100).toFixed(2))
+        : 0,
+    }));
+
+    const processedCorrelation = Array.isArray(correlationData)
+      ? correlationData.map((item: any) => ({
+          pearson_r: Number(item.pearson_r ?? 0),
+          points: Array.isArray(item.points)
+            ? item.points.map((p: any) => ({
+                rating: Number(p.rating ?? 0),
+                votes: Number(p.votes ?? 0),
+              }))
+            : [],
+        }))
+      : [];
+
+    const processedOscars = Array.isArray(oscarAwardsData)
+      ? oscarAwardsData.map((item: TopOscarByCategory) => ({
+          canonical_category: item.canonical_category,
+          total_wins: Number(item.total_wins ?? 0),
+          award_class: item.award_class,
+        }))
+      : [];
+
+    setStats((prev) => ({
+      ...prev,
+      popularActors: processedActors,
+      genreDistribution: processedGenres,
+      crewProfessionRatio: crewWithPercent,
+      correlationRatingsVotes: processedCorrelation,
+      topOscarAwards: processedOscars,
+    }));
   };
 
-  // Fetch genre success by decade
   const fetchGenreSuccessByDecade = async (decade: string) => {
-    try {
-      const res = await fetch("/api/post-genre-decade-success", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ decade }),
-      });
+    const res = await fetch("/api/post-genre-decade-success", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decade }),
+    });
 
-      if (!res.ok) throw new Error("Failed to fetch genre success");
-      const data = await res.json();
-      return data;
-    } catch (err: any) {
-      console.error("Genre success fetch error:", err);
-      throw err;
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.error || "Failed to fetch genre success");
     }
+
+    const data = await res.json();
+    return Array.isArray(data)
+      ? data.map((item: SuccessGenreDecade) => {
+          const decoded = decodeGenres(item.genre);
+          return {
+            decade: Number(item.decade ?? 0),
+            genre: item.genre,
+            success_score: Number(item.success_score ?? 0),
+            genreName: decoded.length ? decoded.join(", ") : "Unknown",
+          };
+        })
+      : [];
   };
 
-  // Fetch movie genre success trend
-  const fetchMovieGenreTrend = async (
-    genre: string,
-    range_before: string,
-    range_after: string
-  ) => {
-    try {
-      const res = await fetch("/api/post-movie-genre-decade-success", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ genre, range_before, range_after }),
-      });
+  const fetchMovieGenreTrend = async (genre: string, decade: string) => {
+    const startYear = parseInt(decade, 10);
+    if (Number.isNaN(startYear)) return [];
 
-      if (!res.ok) throw new Error("Failed to fetch movie trend");
-      const data = await res.json();
-      return data;
-    } catch (err: any) {
-      console.error("Movie trend fetch error:", err);
-      throw err;
-    }
+    const endYear = startYear + 9;
+
+    const res = await fetch("/api/post-movie-genre-decade-success", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        genre,
+        range_before: startYear,
+        range_after: endYear,
+      }),
+    });
+
+    if (!res.ok) throw new Error("Failed to fetch movie trend");
+    const data = await res.json();
+
+    if (!Array.isArray(data)) return [];
+
+    const aggregated = new Map<
+      number,
+      { year: number; totalScore: number; count: number }
+    >();
+
+    data.forEach((item: any) => {
+      const year = Number(item.release_year ?? 0);
+      const score = Number(item.success_score ?? 0);
+      if (!aggregated.has(year)) {
+        aggregated.set(year, { year, totalScore: 0, count: 0 });
+      }
+      const entry = aggregated.get(year)!;
+      entry.totalScore += score;
+      entry.count += 1;
+    });
+
+    return Array.from(aggregated.values())
+      .map((entry) => ({
+        year: entry.year,
+        avgSuccess: entry.count ? entry.totalScore / entry.count : 0,
+        count: entry.count,
+      }))
+      .sort((a, b) => a.year - b.year);
   };
 
   useEffect(() => {
@@ -210,21 +339,17 @@ export default function Dashboard() {
     const initializeDashboard = async () => {
       setLoading(true);
       try {
-        // Fetch main dashboard data
         await fetchDashboardData();
 
-        // Fetch initial best genre data for 2010s
         const bestGenreData = await fetchGenreSuccessByDecade("2010");
         setStats((prev) => ({ ...prev, bestFilmGenre: bestGenreData }));
 
-        // Fetch initial trend data for Action in 2010s
-        const trendData = await fetchMovieGenreTrend("Action", "2010", "2020");
+        const trendData = await fetchMovieGenreTrend("Action", "2010");
         setStats((prev) => ({ ...prev, genreSuccessTrend: trendData }));
 
         setError(null);
         setErrorDetails(null);
       } catch (err: any) {
-        console.error("API error:", err);
         setError("Failed to load data from database");
         setErrorDetails(err.message || "Unknown error");
       } finally {
@@ -239,13 +364,8 @@ export default function Dashboard() {
     evt.preventDefault();
     setTrendLoading(true);
     try {
-      const trendData = await fetchMovieGenreTrend(
-        formGenre,
-        formDecade,
-        formAfterYear
-      );
+      const trendData = await fetchMovieGenreTrend(formGenre, formDecade);
       setStats((prev) => ({ ...prev, genreSuccessTrend: trendData }));
-
       setError(null);
     } catch (err: any) {
       setError(err.message ?? "Unknown error");
@@ -277,23 +397,43 @@ export default function Dashboard() {
       const res = await fetch("/api/post-popular-movies-of-actor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ full_name: actorName }),
+        body: JSON.stringify({ actorName }),
       });
 
-      if (!res.ok) throw new Error("Actor search failed");
-      const data = await res.json();
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(errBody.error || "Actor search failed");
+      }
+
+      const { actor, movies } = await res.json();
+
+      if (!Array.isArray(movies)) throw new Error("Unexpected response format");
+
+      const processedMovies = movies.map((item: any) => ({
+        title_key: item.title_key,
+        title: item.title ?? item.title_key,
+        avg_rating: Number(item.avg_rating ?? 0),
+        num_votes: Number(item.num_votes ?? 0),
+        success_score: Number(item.success_score ?? 0),
+      }));
+
+      const totalVotes = processedMovies.reduce(
+        (sum, movie) => sum + movie.num_votes,
+        0
+      );
+      const avgRating =
+        processedMovies.reduce((sum, movie) => sum + movie.avg_rating, 0) /
+          (processedMovies.length || 1) || 0;
 
       setStats((prev) => ({
         ...prev,
         actorProfile: {
-          actor: actorName,
-          totalMovies: data.length,
-          avgRating:
-            data.reduce((sum: number, m: any) => sum + m.rating, 0) /
-              data.length || 0,
-          totalVotes: data.reduce((sum: number, m: any) => sum + m.votes, 0),
+          actor,
+          totalMovies: processedMovies.length,
+          avgRating,
+          totalVotes,
           topGenres: [],
-          recentMovies: data,
+          recentMovies: processedMovies,
         },
       }));
       setError(null);
@@ -357,7 +497,6 @@ export default function Dashboard() {
           📊 IMDb Analytics Dashboard
         </h1>
 
-        {/* EDA Section */}
         <div className="mb-12">
           <h2 className="text-3xl font-bold text-white mb-6 flex items-center">
             <span className="mr-3">📈</span>
@@ -365,7 +504,6 @@ export default function Dashboard() {
           </h2>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-            {/* Popular Actors Tables (Roll-up) */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
               <div className="flex items-center mb-6">
                 <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-red-600 rounded-lg flex items-center justify-center text-xl mr-3">
@@ -382,9 +520,9 @@ export default function Dashboard() {
               </div>
               {stats.popularActors.length > 0 ? (
                 <div className="space-y-3">
-                  {stats.popularActors.map((actor, index) => (
+                  {stats.popularActors.map((actor) => (
                     <div
-                      key={actor.actor_rank}
+                      key={`actor-${actor.actor_rank}`}
                       className="flex justify-between items-center p-3 bg-gradient-to-r from-gray-50 to-pink-50 dark:from-gray-700/50 dark:to-pink-900/20 rounded-xl"
                     >
                       <div>
@@ -396,7 +534,7 @@ export default function Dashboard() {
                         </div>
                       </div>
                       <div className="text-xl font-bold text-pink-600">
-                        ⭐ {actor.avg_rating ?? 0}
+                        ⭐ {actor.avg_rating.toFixed(2)}
                       </div>
                     </div>
                   ))}
@@ -408,7 +546,6 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* Popular Genres Tables (Roll-up) - INCREASED HEIGHT */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
               <div className="flex items-center mb-6">
                 <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center text-xl mr-3">
@@ -419,7 +556,7 @@ export default function Dashboard() {
                     Popular Genres
                   </h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Roll-up by volume
+                    Roll-up by success score
                   </p>
                 </div>
               </div>
@@ -428,7 +565,7 @@ export default function Dashboard() {
                   <BarChart data={stats.genreDistribution}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <XAxis
-                      dataKey="name"
+                      dataKey="label"
                       tick={{ fill: "#6b7280", fontSize: 10 }}
                       angle={-20}
                       textAnchor="end"
@@ -436,13 +573,36 @@ export default function Dashboard() {
                     />
                     <YAxis tick={{ fill: "#6b7280" }} />
                     <Tooltip
+                      formatter={(value: number, key: string, payload: any) => {
+                        if (key === "success_score") {
+                          return [
+                            `${value.toFixed(2)} (Total Titles: ${
+                              payload.payload.total_titles
+                            })`,
+                            "Success Score",
+                          ];
+                        }
+                        return [value, key];
+                      }}
                       contentStyle={{
                         backgroundColor: "rgba(100, 100, 100, 0.95)",
                         border: "none",
                         borderRadius: "12px",
                       }}
                     />
-                    <Bar dataKey="value" fill="#10B981" radius={[8, 8, 0, 0]} />
+                    <Legend />
+                    <Bar
+                      dataKey="success_score"
+                      fill="#10B981"
+                      name="Success Score"
+                      radius={[8, 8, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="total_titles"
+                      fill="#3B82F6"
+                      name="Total Titles"
+                      radius={[8, 8, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
@@ -452,7 +612,6 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* Popular Movies of GIVEN Actor (Roll-up, Slice) - TABLE FORMAT */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
               <div className="flex items-center mb-6">
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-xl mr-3">
@@ -494,24 +653,27 @@ export default function Dashboard() {
                       🎬 {stats.actorProfile.actor}
                     </div>
                     <div className="text-xs text-gray-600 dark:text-gray-400">
-                      {stats.actorProfile.totalMovies} movies • ⭐{" "}
-                      {stats.actorProfile.avgRating.toFixed(1)}
+                      {stats.actorProfile.totalMovies} entries • ⭐{" "}
+                      {stats.actorProfile.avgRating.toFixed(2)} • Votes{" "}
+                      {stats.actorProfile.totalVotes.toLocaleString()}
                     </div>
                   </div>
 
-                  {/* TABLE FORMAT */}
                   <div className="overflow-auto max-h-[280px]">
                     <table className="w-full text-xs">
                       <thead className="sticky top-0 bg-gray-100 dark:bg-gray-700">
                         <tr className="border-b border-gray-200 dark:border-gray-600">
                           <th className="text-left p-2 font-semibold text-gray-700 dark:text-gray-300">
-                            Movie
-                          </th>
-                          <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300">
-                            Year
+                            Title Key
                           </th>
                           <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300">
                             Rating
+                          </th>
+                          <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300">
+                            Votes
+                          </th>
+                          <th className="text-center p-2 font-semibold text-gray-700 dark:text-gray-300">
+                            Success Score
                           </th>
                         </tr>
                       </thead>
@@ -526,11 +688,14 @@ export default function Dashboard() {
                               <td className="p-2 text-gray-800 dark:text-white font-medium">
                                 {movie.title}
                               </td>
-                              <td className="text-center p-2 text-gray-600 dark:text-gray-400">
-                                {movie.year}
-                              </td>
                               <td className="text-center p-2 font-semibold text-blue-600 dark:text-blue-400">
-                                ⭐ {movie.rating.toFixed(1)}
+                                ⭐ {movie.avg_rating.toFixed(2)}
+                              </td>
+                              <td className="text-center p-2 text-gray-600 dark:text-gray-400">
+                                {movie.num_votes.toLocaleString()}
+                              </td>
+                              <td className="text-center p-2 text-gray-600 dark:text-gray-400">
+                                {movie.success_score.toFixed(2)}
                               </td>
                             </tr>
                           ))}
@@ -544,13 +709,19 @@ export default function Dashboard() {
                 </p>
               )}
             </div>
-            {/* Top Oscar Awards */}
-            <div className="overflow-x-auto rounded-2xl shadow bg-white">
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 mb-10">
+          <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
+            Top Oscar Categories
+          </h3>
+          {stats.topOscarAwards.length > 0 ? (
+            <div className="overflow-x-auto rounded-2xl shadow bg-white dark:bg-gray-900">
               <table className="min-w-full border-collapse">
-                <thead className="bg-gray-100 text-gray-700 uppercase text-sm">
+                <thead className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 uppercase text-sm">
                   <tr>
-                    <th className="px-4 py-3 text-left">Award Class</th>
-                    <th className="px-4 py-3 text-left">Category</th>
+                    <th className="px-4 py-3 text-left">Canonical Category</th>
                     <th className="px-4 py-3 text-right">Total Wins</th>
                   </tr>
                 </thead>
@@ -558,13 +729,16 @@ export default function Dashboard() {
                   {stats.topOscarAwards.map((item, i) => (
                     <tr
                       key={i}
-                      className={`border-t hover:bg-gray-50 transition ${
-                        i % 2 === 0 ? "bg-white" : "bg-gray-50"
+                      className={`border-t hover:bg-gray-50 dark:hover:bg-gray-800 transition ${
+                        i % 2 === 0
+                          ? "bg-white dark:bg-gray-900"
+                          : "bg-gray-50 dark:bg-gray-800/60"
                       }`}
                     >
-                      <td className="px-4 py-3">{item.award_class}</td>
-                      <td className="px-4 py-3">{item.canonical_category}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-indigo-600">
+                      <td className="px-4 py-3">
+                        {item.canonical_category || "Unknown"}
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-green-600">
                         {item.total_wins}
                       </td>
                     </tr>
@@ -572,10 +746,13 @@ export default function Dashboard() {
                 </tbody>
               </table>
             </div>
-          </div>
+          ) : (
+            <p className="text-gray-400 text-center py-8">
+              No Oscar data available
+            </p>
+          )}
         </div>
 
-        {/* Charts Section */}
         <div className="mb-12">
           <h2 className="text-3xl font-bold text-white mb-6 flex items-center">
             <span className="mr-3">📊</span>
@@ -583,7 +760,6 @@ export default function Dashboard() {
           </h2>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Best Film Genre (Roll-up) WITH DECADE INPUT */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
               <div className="flex items-center mb-6">
                 <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center text-xl mr-3">
@@ -594,12 +770,11 @@ export default function Dashboard() {
                     Best Film Genres
                   </h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Slice - Success by decade
+                    Slice - Success score by decade
                   </p>
                 </div>
               </div>
 
-              {/* Decade Selector */}
               <div className="mb-4">
                 <label className="block text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
                   Select Decade
@@ -627,7 +802,7 @@ export default function Dashboard() {
                   <BarChart data={stats.bestFilmGenre}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <XAxis
-                      dataKey="genre"
+                      dataKey="genreName"
                       tick={{ fill: "#6b7280", fontSize: 11 }}
                       angle={-20}
                       textAnchor="end"
@@ -635,23 +810,20 @@ export default function Dashboard() {
                     />
                     <YAxis tick={{ fill: "#6b7280" }} />
                     <Tooltip
+                      formatter={(value: number) => [
+                        value.toFixed(2),
+                        "Success Score",
+                      ]}
                       contentStyle={{
                         backgroundColor: "rgba(100, 100, 100, 0.95)",
                         border: "none",
                         borderRadius: "12px",
                       }}
                     />
-                    <Legend />
                     <Bar
-                      dataKey="avgRating"
+                      dataKey="success_score"
                       fill="#10B981"
-                      name="Avg Rating"
-                      radius={[8, 8, 0, 0]}
-                    />
-                    <Bar
-                      dataKey="successRate"
-                      fill="#3B82F6"
-                      name="Success Rate %"
+                      name="Success Score"
                       radius={[8, 8, 0, 0]}
                     />
                   </BarChart>
@@ -663,7 +835,6 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* Crew Profession Ratio (Roll-up Pie) */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
               <div className="flex items-center mb-6">
                 <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center text-xl mr-3">
@@ -686,11 +857,12 @@ export default function Dashboard() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ profession, count }) =>
-                        `${profession} ${count}%`
+                      label={({ profession, percentage }) =>
+                        `${profession}: ${percentage}%`
                       }
                       outerRadius={90}
                       dataKey="percentage"
+                      nameKey="profession"
                     >
                       {stats.crewProfessionRatio.map((entry, index) => (
                         <Cell
@@ -705,6 +877,10 @@ export default function Dashboard() {
                         border: "none",
                         borderRadius: "12px",
                       }}
+                      formatter={(value: number, name: string, props) => [
+                        `${value}%`,
+                        name,
+                      ]}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -715,7 +891,6 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* Successful Movies by Genre (Dice) - LINE CHART */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center">
@@ -737,7 +912,7 @@ export default function Dashboard() {
                 onSubmit={handleTrendSubmit}
                 className="flex flex-wrap items-end gap-2 mb-4"
               >
-                <div className="flex-1 min-w-[100px]">
+                <div className="flex-1 min-w-[120px]">
                   <label className="block text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
                     Genre
                   </label>
@@ -748,29 +923,13 @@ export default function Dashboard() {
                     placeholder="Action"
                   />
                 </div>
-                <div className="flex-1 min-w-[100px]">
+                <div className="flex-1 min-w-[120px]">
                   <label className="block text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
-                    Year Before
+                    Decade
                   </label>
                   <select
                     value={formDecade}
                     onChange={(e) => setFormDecade(e.target.value)}
-                    className="w-full rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {["1980", "1990", "2000", "2010", "2020"].map((decade) => (
-                      <option key={decade} value={decade}>
-                        {decade}s
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex-1 min-w-[100px]">
-                  <label className="block text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
-                    Year After
-                  </label>
-                  <select
-                    value={formAfterYear}
-                    onChange={(e) => setFormAfterYear(e.target.value)}
                     className="w-full rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 px-2 py-1.5 text-sm text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     {["1980", "1990", "2000", "2010", "2020"].map((decade) => (
@@ -807,14 +966,33 @@ export default function Dashboard() {
                       yAxisId="left"
                       stroke="#10B981"
                       tick={{ fontSize: 10 }}
+                      label={{
+                        value: "Average Success",
+                        angle: -90,
+                        position: "insideLeft",
+                        fill: "#10B981",
+                        fontSize: 10,
+                      }}
                     />
                     <YAxis
                       yAxisId="right"
                       orientation="right"
                       stroke="#3B82F6"
                       tick={{ fontSize: 10 }}
+                      label={{
+                        value: "Count",
+                        angle: 90,
+                        position: "insideRight",
+                        fill: "#3B82F6",
+                        fontSize: 10,
+                      }}
                     />
                     <Tooltip
+                      formatter={(value: number, name: string) =>
+                        name === "avgSuccess"
+                          ? [value.toFixed(2), "Avg Success"]
+                          : [value, "Titles"]
+                      }
                       contentStyle={{
                         backgroundColor: "rgba(100, 100, 100, 0.95)",
                         border: "none",
@@ -826,21 +1004,21 @@ export default function Dashboard() {
                     <Line
                       yAxisId="left"
                       type="monotone"
-                      dataKey="successCount"
+                      dataKey="avgSuccess"
                       stroke="#10B981"
                       strokeWidth={3}
                       dot={{ r: 4 }}
-                      name="Success Count"
+                      name="Avg Success"
                       activeDot={{ r: 6 }}
                     />
                     <Line
                       yAxisId="right"
                       type="monotone"
-                      dataKey="avgRating"
+                      dataKey="count"
                       stroke="#3B82F6"
                       strokeWidth={3}
                       dot={{ r: 4 }}
-                      name="Avg Rating"
+                      name="Title Count"
                       activeDot={{ r: 6 }}
                     />
                   </LineChart>
@@ -857,7 +1035,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Stats Section */}
         <div className="mb-12">
           <h2 className="text-3xl font-bold text-white mb-6 flex items-center">
             <span className="mr-3">📐</span>
@@ -865,9 +1042,8 @@ export default function Dashboard() {
           </h2>
 
           <div className="grid grid-cols-1 gap-8">
-            {/* Correlation Test (Roll-up) */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-xl mr-3">
                     📊
@@ -886,44 +1062,56 @@ export default function Dashboard() {
                     Pearson r
                   </p>
                   <p className="text-2xl font-bold text-blue-600">
-                    {stats.correlationRatingsVotes[0].pearson_r || "N/A"}
+                    {stats.correlationRatingsVotes.length > 0
+                      ? stats.correlationRatingsVotes[0].pearson_r.toFixed(4)
+                      : "N/A"}
                   </p>
                 </div>
               </div>
-              {stats.correlationRatingsVotes.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <ScatterChart>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis
-                      type="number"
-                      dataKey="votes"
-                      name="Votes"
-                      tick={{ fill: "#6b7280" }}
-                    />
-                    <YAxis
-                      type="number"
-                      dataKey="rating"
-                      name="Rating"
-                      tick={{ fill: "#6b7280" }}
-                    />
-                    <Tooltip
-                      cursor={{ strokeDasharray: "3 3" }}
-                      contentStyle={{
-                        backgroundColor: "rgba(255, 255, 255, 0.95)",
-                        border: "none",
-                        borderRadius: "12px",
-                      }}
-                    />
-                    <Scatter
-                      name="Movies"
-                      data={stats.correlationRatingsVotes}
-                      fill="#3B82F6"
-                    />
-                  </ScatterChart>
-                </ResponsiveContainer>
+
+              {stats.correlationRatingsVotes.length > 0 &&
+              stats.correlationRatingsVotes[0].points.length > 0 ? (
+                <div className="mt-6 h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ScatterChart>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis
+                        type="number"
+                        dataKey="votes"
+                        name="Votes"
+                        tick={{ fill: "#6b7280" }}
+                      />
+                      <YAxis
+                        type="number"
+                        dataKey="rating"
+                        name="Rating"
+                        tick={{ fill: "#6b7280" }}
+                      />
+                      <Tooltip
+                        cursor={{ strokeDasharray: "3 3" }}
+                        contentStyle={{
+                          backgroundColor: "rgba(255, 255, 255, 0.95)",
+                          border: "none",
+                          borderRadius: "12px",
+                        }}
+                        formatter={(value: number, name: string) => [
+                          name === "Votes"
+                            ? value.toLocaleString()
+                            : value.toFixed(1),
+                          name,
+                        ]}
+                      />
+                      <Scatter
+                        name="Titles"
+                        data={stats.correlationRatingsVotes[0].points}
+                        fill="#3B82F6"
+                      />
+                    </ScatterChart>
+                  </ResponsiveContainer>
+                </div>
               ) : (
-                <p className="text-gray-400 text-center py-8">
-                  No data available
+                <p className="mt-6 text-gray-400 text-center">
+                  Not enough data to display scatter plot.
                 </p>
               )}
             </div>
@@ -931,15 +1119,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Footer */}
       <div className="text-center text-gray-400 text-sm py-6 border-t border-gray-700">
         <p>
           📊 IMDb Analytics Dashboard • Built with Next.js & Recharts • MySQL
           Database
         </p>
-        <p className="text-xs mt-2 text-gray-500">
-          Roan Cedric Campo • STADVDB Project
-        </p>
+        <p className="text-xs mt-2 text-gray-500">STADVDB Project</p>
       </div>
     </div>
   );
